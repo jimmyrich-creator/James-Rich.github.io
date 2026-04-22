@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,25 +9,39 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* CSS to handle the switching of pages */
-        .page-section { display: none; opacity: 0; transition: opacity 0.3s ease-in-out; }
-        .active-page { display: block; opacity: 1; }
+        .page-section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .active-page {
+            display: block;
+            opacity: 1;
+        }
     </style>
 </head>
+
 <body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-blue-500/30">
 
     <!-- Global Navigation Bar -->
     <nav class="p-4 sm:p-6 bg-slate-900/80 sticky top-0 backdrop-blur-md border-b border-slate-800 z-20">
         <div class="max-w-5xl mx-auto flex justify-between items-center">
-            <button onclick="navigateTo('landing')" class="text-2xl font-bold tracking-tighter text-white hover:text-blue-400 transition-colors">
-                Dev<span class="text-blue-500">.</span>
+            <button onclick="navigateTo('landing')"
+                class="text-2xl font-bold tracking-tighter text-white hover:text-blue-400 transition-colors">
+                James <span class="text-blue-500">Rich</span>
             </button>
-            
+
             <!-- Desktop Menu -->
             <div class="hidden sm:flex space-x-8 font-medium">
-                <button onclick="navigateTo('skills')" class="text-slate-400 hover:text-white transition-colors">Skills</button>
-                <button onclick="navigateTo('projects')" class="text-slate-400 hover:text-white transition-colors">Projects</button>
-                <button onclick="navigateTo('aiprojects')" class="text-slate-400 hover:text-white transition-colors">AI Projects</button>
-                <button onclick="navigateTo('contact')" class="text-slate-400 hover:text-white transition-colors">Contact</button>
+                <button onclick="navigateTo('skills')"
+                    class="text-slate-400 hover:text-white transition-colors">Skills</button>
+                <button onclick="navigateTo('projects')"
+                    class="text-slate-400 hover:text-white transition-colors">Projects</button>
+                <button onclick="navigateTo('aiprojects')" class="text-slate-400 hover:text-white transition-colors">AI
+                    Projects</button>
+                <button onclick="navigateTo('contact')"
+                    class="text-slate-400 hover:text-white transition-colors">Contact</button>
             </div>
 
             <!-- Mobile Menu Toggle (Simplified) -->
@@ -43,63 +58,82 @@
     <main class="flex-grow flex items-center justify-center p-6 max-w-5xl mx-auto w-full">
 
         <!-- 1. LANDING PAGE -->
-        <section id="landing" class="page-section active-page w-full pb-12 text-center relative mt-0">
-            
-            <!-- Half Page Background Banner -->
-            <div class="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[100vw] h-[55vh] md:h-[65vh] -z-10 overflow-hidden pointer-events-none">
-                <!-- Placeholder Banner Image (replace src with your own banner if you have one, e.g., images/my-banner.jpg) -->
-                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" alt="Background Banner" class="w-full h-full object-cover opacity-30 mix-blend-luminosity">
-                <!-- Gradient to blend the banner seamlessly into the dark background -->
-                <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/60 to-slate-900"></div>
-            </div>
+        <section id="landing" class="page-section active-page w-full pb-12 text-center mt-0">
 
-            <!-- Added Profile Image -->
-            <div class="mb-8 pt-4 md:pt-12 flex justify-center relative z-10">
-                <!-- Replace src with your own image later: e.g., src="images/my-profile.jpg" -->
-                <img src="images/my-profile.jpg" alt="My Profile Avatar" class="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-slate-800 shadow-2xl object-cover bg-slate-800 hover:scale-105 transition-transform duration-300">
-            </div>
+            <!-- Hero Video Panel -->
+            <div
+                class="w-full relative rounded-[2rem] overflow-hidden shadow-2xl border border-slate-700/50 bg-slate-900 flex flex-col items-center justify-center pt-16 pb-12 px-6 md:px-12 mb-12 mt-4 z-10 min-h-[65vh]">
 
-            <!-- Hero Video Panel with Text Overlay -->
-            <div class="w-full max-w-5xl mx-auto min-h-[50vh] md:aspect-video rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-slate-700/50 bg-slate-900 relative mb-12 flex flex-col items-center justify-center p-6 md:p-12 z-10">
-                
                 <!-- Background Video -->
-                <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover z-0 opacity-60">
+                <video id="hero-video" autoplay muted playsinline
+                    class="absolute inset-0 w-full h-full object-cover z-0 opacity-100">
                     <source src="images/JamesRichVideo.mp4" type="video/mp4">
                 </video>
-                
-                <!-- Dark Gradient Overlay for better text readability -->
-                <div class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/40 to-slate-900/90 z-0 pointer-events-none"></div>
 
-                <!-- Text Content overlaid on video -->
-                <div class="relative z-10 flex flex-col items-center">
-                    <div class="inline-block mb-4 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-300 text-sm font-semibold tracking-wide backdrop-blur-md shadow-lg">
+                <!-- Dark Gradient Overlay for text readability -->
+                <div
+                    class="absolute inset-0 bg-gradient-to-b from-slate-900/10 via-slate-900/20 to-slate-900 z-0 pointer-events-none">
+                </div>
+
+                <!-- Content Layer -->
+                <div class="relative z-10 flex flex-col items-center w-full">
+
+                    <!-- Profile Image moved inside the Hero -->
+                    <div class="mb-6 flex justify-center">
+                        <img src="images/my-profile.jpg" alt="James Rich Profile Avatar"
+                            class="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-slate-800 shadow-2xl object-cover bg-slate-800 hover:scale-105 transition-transform duration-300">
+                    </div>
+
+                    <div
+                        class="inline-block mb-4 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-300 text-sm font-semibold tracking-wide backdrop-blur-md shadow-lg">
                         Available for hire
                     </div>
-                    
+
                     <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-white drop-shadow-xl">
-                        Building <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 drop-shadow-md">digital experiences</span>
+                        Building <span
+                            class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 drop-shadow-md">digital
+                            experiences</span>
                     </h1>
-                    
-                    <p class="text-lg md:text-xl text-slate-200 mb-10 max-w-2xl mx-auto leading-relaxed drop-shadow-md font-medium">
-                        Welcome to my GitHub Pages portfolio. I am a passionate developer focused on creating clean, elegant, and efficient web applications.
+
+                    <p
+                        class="text-lg md:text-xl text-slate-200 mb-10 max-w-2xl mx-auto leading-relaxed drop-shadow-md font-medium">
+                        I am a passionate designer, producer and engineer helping world class teams create world class
+                        games, video and social media.
                     </p>
 
-                    <!-- Navigation Buttons moved inside the video panel -->
+                    <!-- Navigation Buttons -->
                     <div class="flex flex-wrap justify-center items-center gap-4 mt-2">
-                        <button onclick="navigateTo('projects')" class="px-8 py-4 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-semibold shadow-lg shadow-blue-900/50 flex items-center justify-center gap-2 w-full sm:w-auto">
+                        <button onclick="navigateTo('projects')"
+                            class="px-8 py-4 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-semibold shadow-lg shadow-blue-900/50 flex items-center justify-center gap-2 w-full sm:w-auto">
                             Projects I've Shipped
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                            </svg>
                         </button>
-                        <button onclick="navigateTo('aiprojects')" class="px-8 py-4 rounded-full bg-emerald-600/30 border border-emerald-500/50 hover:bg-emerald-600/50 backdrop-blur-sm transition-all font-semibold text-emerald-300 w-full sm:w-auto">
+                        <button onclick="navigateTo('aiprojects')"
+                            class="px-8 py-4 rounded-full bg-emerald-600/30 border border-emerald-500/50 hover:bg-emerald-600/50 backdrop-blur-sm transition-all font-semibold text-emerald-300 w-full sm:w-auto">
                             View AI Projects
                         </button>
-                        <button onclick="navigateTo('skills')" class="px-8 py-4 rounded-full bg-slate-800/80 backdrop-blur-sm border border-slate-600 hover:bg-slate-700 hover:border-slate-400 transition-all font-semibold text-slate-100 w-full sm:w-auto">
+                        <button onclick="navigateTo('skills')"
+                            class="px-8 py-4 rounded-full bg-slate-800/80 backdrop-blur-sm border border-slate-600 hover:bg-slate-700 hover:border-slate-400 transition-all font-semibold text-slate-100 w-full sm:w-auto">
                             Explore Skills
                         </button>
-                        <button onclick="navigateTo('contact')" class="px-8 py-4 rounded-full bg-transparent border border-slate-400 backdrop-blur-sm hover:bg-slate-800/80 transition-all font-semibold text-slate-100 w-full sm:w-auto">
+                        <button onclick="navigateTo('contact')"
+                            class="px-8 py-4 rounded-full bg-transparent border border-slate-400 backdrop-blur-sm hover:bg-slate-800/80 transition-all font-semibold text-slate-100 w-full sm:w-auto">
                             Get in Touch
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Partner / Experience Logos -->
+            <div class="mt-4 mb-4 max-w-4xl mx-auto px-4">
+                <p class="text-slate-400 text-sm font-semibold tracking-widest uppercase mb-6">Teams I've Collaborated
+                    With</p>
+                <div class="bg-slate-800/30 rounded-2xl p-4 border border-slate-700/50 shadow-xl backdrop-blur-sm">
+                    <img src="images/Logos.jpg" alt="Companies and Studios"
+                        class="w-full h-auto rounded-xl opacity-90 hover:opacity-100 transition-opacity duration-300">
                 </div>
             </div>
         </section>
@@ -107,42 +141,176 @@
         <!-- 2. SKILLS PAGE -->
         <section id="skills" class="page-section w-full py-12">
             <div class="mb-12">
-                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">Technical Skills</h2>
-                <p class="text-slate-400 text-lg">Technologies and tools I work with on a daily basis.</p>
+                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">Knowledge and Skills</h2>
+                <p class="text-slate-400 text-lg">Comprehensive expertise across development, production, and
+                    leadership.</p>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Skill Category 1 -->
-                <div class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50">
-                    <h3 class="text-xl font-semibold text-blue-400 mb-4">Frontend</h3>
-                    <ul class="space-y-3">
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> HTML5 & CSS3</li>
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> JavaScript (ES6+)</li>
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> React.js & Tailwind CSS</li>
+
+            <div class="flex flex-col gap-8">
+
+                <!-- Experience & Methodology Box -->
+                <div class="p-6 md:p-8 rounded-2xl bg-slate-800/50 border border-slate-700/50 shadow-lg">
+                    <h3 class="text-2xl font-semibold text-blue-400 mb-6 flex items-center gap-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                            </path>
+                        </svg>
+                        Experience & Methodology
+                    </h3>
+                    <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                        <li class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-300 leading-relaxed">Expert in software development cycle with over
+                                14 major products shipped and supported live.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-300 leading-relaxed">Scrum Master, project planning and team leading
+                                using agile/sprint framework.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-300 leading-relaxed">Feature teams of all disciplines: Production,
+                                Engineering, Automation, Design, UI, Art, VFX, Character, Animation, Audio, Tools, UX,
+                                QA, Social, Engagement, Content.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-300 leading-relaxed">Managing both local teams as well as outsource
+                                teams of 100+ across multiple territories.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-300 leading-relaxed">Planning, resourcing, reporting, risk analysis,
+                                process, methodology and structure.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-300 leading-relaxed">Development of AI agents and gen AI, staying
+                                current with the latest advancements in the field.</span>
+                        </li>
+                        <li class="flex items-start gap-3 md:col-span-2">
+                            <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-300 leading-relaxed">Test suite creation - test scenarios,
+                                scripting, database management, reporting, dashboards.</span>
+                        </li>
                     </ul>
                 </div>
-                <!-- Skill Category 2 -->
-                <div class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50">
-                    <h3 class="text-xl font-semibold text-emerald-400 mb-4">Backend</h3>
-                    <ul class="space-y-3">
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Node.js & Express</li>
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Python</li>
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> PostgreSQL & MongoDB</li>
-                    </ul>
+
+                <!-- Technologies & Tools Box -->
+                <div class="p-6 md:p-8 rounded-2xl bg-slate-800/50 border border-slate-700/50 shadow-lg">
+                    <h3 class="text-2xl font-semibold text-purple-400 mb-6 flex items-center gap-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                        </svg>
+                        Software, Languages & Tools
+                    </h3>
+                    <div class="flex flex-wrap gap-3">
+                        <!-- Badges -->
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">C#</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Python</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Java</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">JSON</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">HTML</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Visual
+                            Studio</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">VS
+                            Code</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Xbox
+                            XDK</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Sony
+                            Neighbourhood</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Atlassian</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">DevTrack</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Devtest</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Unreal
+                            Engine</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Unity</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">FrostEd</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">ProDG</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Adobe
+                            CS</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Nintendo
+                            NDEV</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">DataDog</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">GitHub</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-emerald-400 shadow-sm">ChatGPT4</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-emerald-400 shadow-sm">Claude</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-emerald-400 shadow-sm">Gemini
+                            Pro</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">CodePen</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">JIRA</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">P4V</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Confluence</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Cursor</span>
+                        <span
+                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Antigravity</span>
+                    </div>
                 </div>
-                <!-- Skill Category 3 -->
-                <div class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50">
-                    <h3 class="text-xl font-semibold text-purple-400 mb-4">Tools & Dev</h3>
-                    <ul class="space-y-3">
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Git & GitHub</li>
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Docker</li>
-                        <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> VS Code & Figma</li>
-                    </ul>
-                </div>
+
             </div>
-            
+
             <div class="mt-12 text-center">
-                <button onclick="navigateTo('landing')" class="text-slate-400 hover:text-white underline underline-offset-4">← Back to Home</button>
+                <button onclick="navigateTo('landing')"
+                    class="text-slate-400 hover:text-white underline underline-offset-4">← Back to Home</button>
             </div>
         </section>
 
@@ -150,99 +318,123 @@
         <section id="projects" class="page-section w-full py-12">
             <div class="mb-12">
                 <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">Professional Experience</h2>
-                <p class="text-slate-400 text-lg">A selection of major titles and platforms I have contributed to throughout my career.</p>
+                <p class="text-slate-400 text-lg">A selection of major titles and platforms I have contributed to
+                    throughout my career.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                
+
                 <!-- Project 1: Harry Potter -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
                     <div class="h-96 bg-slate-700/50 flex items-center justify-center overflow-hidden">
-                        <img src="https://media.giphy.com/media/12gg6OudbB2yUU/giphy.gif" alt="Harry Potter" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="images/HARRY POTTER.jpg" alt="Harry Potter"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Harry Potter</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">EA Bright Light</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Contributed to the development of interactive magical experiences and engaging gameplay mechanics for this beloved cinematic franchise.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Contributed to the development of interactive
+                            magical experiences and engaging gameplay mechanics for this beloved cinematic franchise.
+                        </p>
                     </div>
                 </div>
 
                 <!-- Project 2: Star Wars Battlefront -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
                     <div class="h-96 bg-slate-700/50 flex items-center justify-center overflow-hidden">
-                        <img src="https://media.giphy.com/media/3o7abrH8o4HMgEAV9e/giphy.gif" alt="Star Wars Battlefront" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="images/Battlefront2.jpeg" alt="Star Wars Battlefront"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Star Wars Battlefront</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">EA DICE</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Developed cutting-edge multiplayer features and immersive, large-scale galactic combat systems for this blockbuster title.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Developed cutting-edge multiplayer features
+                            and immersive, large-scale galactic combat systems for this blockbuster title.</p>
                     </div>
                 </div>
 
                 <!-- Project 3: Battlefield -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
                     <div class="h-96 bg-slate-700/50 flex items-center justify-center overflow-hidden">
-                        <img src="https://media.giphy.com/media/l41lPzzAtdA0hBNO8/giphy.gif" alt="Battlefield" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="images/BattlefieldV.jpg" alt="Battlefield"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Battlefield</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">Electronic Arts</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Engineered core game mechanics and optimized performance for high-fidelity, chaotic multiplayer warfare environments.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Engineered core game mechanics and optimized
+                            performance for high-fidelity, chaotic multiplayer warfare environments.</p>
                     </div>
                 </div>
 
                 <!-- Project 4: Need For Speed -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
                     <div class="h-96 bg-slate-700/50 flex items-center justify-center overflow-hidden">
-                        <img src="https://media.giphy.com/media/l41JOUJ1gWJ15A2B2/giphy.gif" alt="Need For Speed" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="https://media.giphy.com/media/l41JOUJ1gWJ15A2B2/giphy.gif" alt="Need For Speed"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Need For Speed</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">EA Criterion</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Programmed high-speed physics and dynamic open-world racing sequences to deliver thrilling, high-octane player experiences.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Programmed high-speed physics and dynamic
+                            open-world racing sequences to deliver thrilling, high-octane player experiences.</p>
                     </div>
                 </div>
 
                 <!-- Project 5: Meta Horizon -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
                     <div class="h-96 bg-slate-700/50 flex items-center justify-center overflow-hidden">
-                        <img src="https://media.giphy.com/media/3o7aD2saal6gCGWYAQ/giphy.gif" alt="Meta Horizon" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="https://media.giphy.com/media/3o7aD2saal6gCGWYAQ/giphy.gif" alt="Meta Horizon"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Meta Horizon</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">Meta</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Architected foundational social systems and interactive, scalable virtual environments for the expanding VR metaverse.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Architected foundational social systems and
+                            interactive, scalable virtual environments for the expanding VR metaverse.</p>
                     </div>
                 </div>
 
                 <!-- Project 6: Forza Horizon -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
                     <div class="h-96 bg-slate-700/50 flex items-center justify-center overflow-hidden">
-                        <img src="https://media.giphy.com/media/3o8doUeB1xGzQh0Xy0/giphy.gif" alt="Forza Horizon" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="images/forza-horizon-2.jpg" alt="Forza Horizon"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Forza Horizon</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">Microsoft Playground Games</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Optimized open-world streaming technology and vehicle handling models to create an unparalleled festival racing atmosphere.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Optimized open-world streaming technology and
+                            vehicle handling models to create an unparalleled festival racing atmosphere.</p>
                     </div>
                 </div>
 
                 <!-- Project 7: Moshi Monsters -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors">
                     <div class="h-96 bg-slate-700/50 flex items-center justify-center overflow-hidden">
-                        <img src="https://media.giphy.com/media/l3vR1v8L6I34JEqrC/giphy.gif" alt="Moshi Monsters" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="https://media.giphy.com/media/l3vR1v8L6I34JEqrC/giphy.gif" alt="Moshi Monsters"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Moshi Monsters</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">Mind Candy</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Built engaging frontend mini-games and secure social features for a massively popular online children's entertainment platform.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Built engaging frontend mini-games and secure
+                            social features for a massively popular online children's entertainment platform.</p>
                     </div>
                 </div>
 
             </div>
 
             <div class="mt-12 text-center">
-                <button onclick="navigateTo('landing')" class="text-slate-400 hover:text-white underline underline-offset-4">← Back to Home</button>
+                <button onclick="navigateTo('landing')"
+                    class="text-slate-400 hover:text-white underline underline-offset-4">← Back to Home</button>
             </div>
         </section>
 
@@ -250,46 +442,79 @@
         <section id="aiprojects" class="page-section w-full py-12">
             <div class="mb-12">
                 <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">AI Projects</h2>
-                <p class="text-slate-400 text-lg">Exploring the frontiers of machine learning, generative AI, and automation.</p>
+                <p class="text-slate-400 text-lg">Exploring the frontiers of machine learning, generative AI, and
+                    automation.</p>
             </div>
 
             <!-- Updated grid layout to lg:grid-cols-3 to accommodate the 3rd tile -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <!-- AI Project Placeholder 1 -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors p-8 text-center flex flex-col items-center justify-center">
-                    <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors p-8 text-center flex flex-col items-center justify-center">
+                    <div
+                        class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                            </path>
+                        </svg>
                     </div>
                     <h3 class="text-2xl font-bold text-white mb-3">Computer Vision Tool</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">An experimental computer vision model trained to identify in-game assets and player behavior patterns.</p>
-                    <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wide">Coming Soon</span>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6">An experimental computer vision model trained
+                        to identify in-game assets and player behavior patterns.</p>
+                    <span
+                        class="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wide">Coming
+                        Soon</span>
                 </div>
 
                 <!-- AI Project Placeholder 2 -->
-                <div class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors p-8 text-center flex flex-col items-center justify-center">
-                    <div class="w-16 h-16 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                <div
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-slate-500 transition-colors p-8 text-center flex flex-col items-center justify-center">
+                    <div
+                        class="w-16 h-16 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                            </path>
+                        </svg>
                     </div>
                     <h3 class="text-2xl font-bold text-white mb-3">Procedural Generation AI</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">A generative AI system designed to create infinite variations of 3D environments for rapid prototyping.</p>
-                    <span class="inline-block px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold tracking-wide">In Progress</span>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6">A generative AI system designed to create
+                        infinite variations of 3D environments for rapid prototyping.</p>
+                    <span
+                        class="inline-block px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold tracking-wide">In
+                        Progress</span>
                 </div>
 
                 <!-- AI Project 3: There Will Be Cat Consequences -->
-                <a href="games/TWBCC.html" class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-blue-500 transition-all p-8 text-center flex flex-col items-center justify-center hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/20 cursor-pointer">
-                    <div class="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <a href="games/TWBCC.html"
+                    class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-blue-500 transition-all p-8 text-center flex flex-col items-center justify-center hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/20 cursor-pointer">
+                    <div
+                        class="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z">
+                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
                     </div>
                     <h3 class="text-2xl font-bold text-white mb-3">There Will Be Cat Consequences</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">An AI-driven interactive experience. Click to launch and play the game directly in your browser.</p>
-                    <span class="inline-flex items-center gap-1 text-blue-400 text-sm font-semibold group-hover:text-blue-300">
-                        Play Now <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6">An AI-driven interactive experience. Click to
+                        launch and play the game directly in your browser.</p>
+                    <span
+                        class="inline-flex items-center gap-1 text-blue-400 text-sm font-semibold group-hover:text-blue-300">
+                        Play Now <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
                     </span>
                 </a>
             </div>
 
             <div class="mt-12 text-center">
-                <button onclick="navigateTo('landing')" class="text-slate-400 hover:text-white underline underline-offset-4">← Back to Home</button>
+                <button onclick="navigateTo('landing')"
+                    class="text-slate-400 hover:text-white underline underline-offset-4">← Back to Home</button>
             </div>
         </section>
 
@@ -297,48 +522,73 @@
         <section id="contact" class="page-section w-full py-12 max-w-2xl mx-auto">
             <div class="mb-10 text-center">
                 <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">Let's Connect</h2>
-                <p class="text-slate-400 text-lg">I'm currently looking for new opportunities. Feel free to reach out directly.</p>
+                <p class="text-slate-400 text-lg">I'm currently looking for new opportunities. Feel free to reach out
+                    directly.</p>
             </div>
 
             <div class="bg-slate-800 rounded-2xl p-8 md:p-12 border border-slate-700 shadow-xl flex flex-col gap-8">
-                
+
                 <!-- Email -->
-                <a href="mailto:jamesdanielrich@gmail.com" class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
-                    <div class="p-4 bg-blue-500/10 text-blue-400 rounded-full group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <a href="mailto:jamesdanielrich@gmail.com"
+                    class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
+                    <div
+                        class="p-4 bg-blue-500/10 text-blue-400 rounded-full group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                            </path>
+                        </svg>
                     </div>
                     <div>
                         <p class="text-sm text-slate-400 font-medium mb-1">Email</p>
-                        <p class="text-lg md:text-xl text-white font-semibold group-hover:text-blue-400 transition-colors">jamesdanielrich@gmail.com</p>
+                        <p
+                            class="text-lg md:text-xl text-white font-semibold group-hover:text-blue-400 transition-colors">
+                            jamesdanielrich@gmail.com</p>
                     </div>
                 </a>
 
                 <!-- Phone -->
-                <a href="tel:+4407958050473" class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
-                    <div class="p-4 bg-emerald-500/10 text-emerald-400 rounded-full group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                <a href="tel:+4407958050473"
+                    class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
+                    <div
+                        class="p-4 bg-emerald-500/10 text-emerald-400 rounded-full group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                            </path>
+                        </svg>
                     </div>
                     <div>
                         <p class="text-sm text-slate-400 font-medium mb-1">Phone</p>
-                        <p class="text-lg md:text-xl text-white font-semibold group-hover:text-emerald-400 transition-colors">(+44) 07958050473</p>
+                        <p
+                            class="text-lg md:text-xl text-white font-semibold group-hover:text-emerald-400 transition-colors">
+                            (+44) 07958050473</p>
                     </div>
                 </a>
 
                 <!-- LinkedIn -->
-                <a href="https://www.linkedin.com/in/james-rich-london/" target="_blank" class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
-                    <div class="p-4 bg-purple-500/10 text-purple-400 rounded-full group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                <a href="https://www.linkedin.com/in/james-rich-london/" target="_blank"
+                    class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
+                    <div
+                        class="p-4 bg-purple-500/10 text-purple-400 rounded-full group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                        </svg>
                     </div>
                     <div>
                         <p class="text-sm text-slate-400 font-medium mb-1">LinkedIn</p>
-                        <p class="text-lg md:text-xl text-white font-semibold group-hover:text-purple-400 transition-colors truncate">linkedin.com/in/james-rich-london</p>
+                        <p
+                            class="text-lg md:text-xl text-white font-semibold group-hover:text-purple-400 transition-colors truncate">
+                            linkedin.com/in/james-rich-london</p>
                     </div>
                 </a>
 
             </div>
 
             <div class="mt-12 text-center">
-                <button onclick="navigateTo('landing')" class="text-slate-400 hover:text-white underline underline-offset-4">← Back to Home</button>
+                <button onclick="navigateTo('landing')"
+                    class="text-slate-400 hover:text-white underline underline-offset-4">← Back to Home</button>
             </div>
         </section>
 
@@ -354,18 +604,18 @@
         function navigateTo(pageId) {
             // 1. Get all sections that act as pages
             const pages = document.querySelectorAll('.page-section');
-            
+
             // 2. Hide them all by removing the active class
             pages.forEach(page => {
                 page.classList.remove('active-page');
             });
-            
+
             // 3. Find the target page and show it
             const targetPage = document.getElementById(pageId);
             if (targetPage) {
                 targetPage.classList.add('active-page');
             }
-            
+
             // 4. Smooth scroll back to the top of the page
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -383,7 +633,7 @@
 
         // Update the original navigateTo to push state to history
         const originalNavigateTo = navigateTo;
-        navigateTo = function(pageId, pushToHistory = true) {
+        navigateTo = function (pageId, pushToHistory = true) {
             originalNavigateTo(pageId);
             if (pushToHistory) {
                 // Adds an entry to the browser's history so the "Back" button works
@@ -398,6 +648,34 @@
                 navigateTo(hash, false);
             }
         });
+
+        // --- Video Playlist Logic ---
+        const heroVideo = document.getElementById('hero-video');
+        if (heroVideo) {
+            // Add your MP4 video paths to this array
+            const videoPlaylist = [
+                'images/JamesRichVideo.mp4',
+                'images/keybenefits_anim.mp4',
+                // 'images/a_third_video.mp4'
+            ];
+
+            let currentVideoIndex = 0;
+
+            heroVideo.addEventListener('ended', () => {
+                // Move to the next video
+                currentVideoIndex++;
+
+                // If we reach the end of the playlist, loop back to the first video
+                if (currentVideoIndex >= videoPlaylist.length) {
+                    currentVideoIndex = 0;
+                }
+
+                // Update the video source and play
+                heroVideo.src = videoPlaylist[currentVideoIndex];
+                heroVideo.play().catch(e => console.error("Video play failed", e));
+            });
+        }
     </script>
 </body>
+
 </html>

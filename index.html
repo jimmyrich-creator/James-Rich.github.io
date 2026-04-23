@@ -38,8 +38,8 @@
                     class="text-slate-400 hover:text-white transition-colors">Skills</button>
                 <button onclick="navigateTo('projects')"
                     class="text-slate-400 hover:text-white transition-colors">Projects</button>
-                <button onclick="navigateTo('aiprojects')" class="text-slate-400 hover:text-white transition-colors">AI
-                    Projects</button>
+                <button onclick="navigateTo('aiprojects')" class="text-slate-400 hover:text-white transition-colors">Fun
+                    &amp; Games</button>
                 <button onclick="navigateTo('contact')"
                     class="text-slate-400 hover:text-white transition-colors">Contact</button>
             </div>
@@ -48,7 +48,8 @@
             <div class="sm:hidden flex space-x-4 text-sm font-medium">
                 <button onclick="navigateTo('skills')" class="text-slate-400 hover:text-white">Skills</button>
                 <button onclick="navigateTo('projects')" class="text-slate-400 hover:text-white">Projects</button>
-                <button onclick="navigateTo('aiprojects')" class="text-slate-400 hover:text-white">AI</button>
+                <button onclick="navigateTo('aiprojects')" class="text-slate-400 hover:text-white">Fun &amp;
+                    Games</button>
                 <button onclick="navigateTo('contact')" class="text-slate-400 hover:text-white">Contact</button>
             </div>
         </div>
@@ -101,29 +102,7 @@
                         games, video and social media.
                     </p>
 
-                    <!-- Navigation Buttons -->
-                    <div class="flex flex-wrap justify-center items-center gap-4 mt-2">
-                        <button onclick="navigateTo('projects')"
-                            class="px-8 py-4 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-semibold shadow-lg shadow-blue-900/50 flex items-center justify-center gap-2 w-full sm:w-auto">
-                            Projects I've Shipped
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                            </svg>
-                        </button>
-                        <button onclick="navigateTo('aiprojects')"
-                            class="px-8 py-4 rounded-full bg-emerald-600/30 border border-emerald-500/50 hover:bg-emerald-600/50 backdrop-blur-sm transition-all font-semibold text-emerald-300 w-full sm:w-auto">
-                            View AI Projects
-                        </button>
-                        <button onclick="navigateTo('skills')"
-                            class="px-8 py-4 rounded-full bg-slate-800/80 backdrop-blur-sm border border-slate-600 hover:bg-slate-700 hover:border-slate-400 transition-all font-semibold text-slate-100 w-full sm:w-auto">
-                            Explore Skills
-                        </button>
-                        <button onclick="navigateTo('contact')"
-                            class="px-8 py-4 rounded-full bg-transparent border border-slate-400 backdrop-blur-sm hover:bg-slate-800/80 transition-all font-semibold text-slate-100 w-full sm:w-auto">
-                            Get in Touch
-                        </button>
-                    </div>
+
                 </div>
             </div>
 
@@ -135,6 +114,30 @@
                     <img src="images/Logos.jpg" alt="Companies and Studios"
                         class="w-full h-auto rounded-xl opacity-90 hover:opacity-100 transition-opacity duration-300">
                 </div>
+            </div>
+
+            <!-- Page Navigation Buttons -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 mb-4 max-w-5xl mx-auto px-4 w-full">
+                <button onclick="navigateTo('projects')"
+                    class="px-4 py-4 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-semibold shadow-lg shadow-blue-900/50 flex items-center justify-center gap-2 w-full text-center">
+                    Projects I've Shipped
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                    </svg>
+                </button>
+                <button onclick="navigateTo('aiprojects')"
+                    class="px-4 py-4 rounded-full bg-emerald-600/30 border border-emerald-500/50 hover:bg-emerald-600/50 backdrop-blur-sm transition-all font-semibold text-emerald-300 w-full text-center">
+                    Fun &amp; Games
+                </button>
+                <button onclick="navigateTo('skills')"
+                    class="px-4 py-4 rounded-full bg-purple-600/20 border border-purple-500/40 hover:bg-purple-600/40 backdrop-blur-sm transition-all font-semibold text-purple-300 w-full text-center">
+                    Explore Skills
+                </button>
+                <button onclick="navigateTo('contact')"
+                    class="px-4 py-4 rounded-full bg-rose-600/20 border border-rose-500/40 hover:bg-rose-600/40 backdrop-blur-sm transition-all font-semibold text-rose-300 w-full text-center">
+                    Get in Touch
+                </button>
             </div>
         </section>
 
@@ -158,151 +161,249 @@
                         </svg>
                         Experience & Methodology
                     </h3>
-                    <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-                        <li class="flex items-start gap-3">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                        <div
+                            class="p-5 rounded-xl bg-slate-900/40 border border-slate-700/50 hover:bg-slate-700/30 transition-colors flex items-start gap-4">
                             <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="text-slate-300 leading-relaxed">Expert in software development cycle with over
-                                14 major products shipped and supported live.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
+                            <span class="text-slate-300 leading-relaxed text-sm">Expert in software development cycle
+                                with over 14 major products shipped and supported live.</span>
+                        </div>
+                        <div
+                            class="p-5 rounded-xl bg-slate-900/40 border border-slate-700/50 hover:bg-slate-700/30 transition-colors flex items-start gap-4">
                             <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="text-slate-300 leading-relaxed">Scrum Master, project planning and team leading
-                                using agile/sprint framework.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
+                            <span class="text-slate-300 leading-relaxed text-sm">Scrum Master, project planning and team
+                                leading using agile/sprint framework.</span>
+                        </div>
+                        <div
+                            class="p-5 rounded-xl bg-slate-900/40 border border-slate-700/50 hover:bg-slate-700/30 transition-colors flex items-start gap-4">
                             <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="text-slate-300 leading-relaxed">Feature teams of all disciplines: Production,
-                                Engineering, Automation, Design, UI, Art, VFX, Character, Animation, Audio, Tools, UX,
-                                QA, Social, Engagement, Content.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
+                            <span class="text-slate-300 leading-relaxed text-sm">Feature teams of all disciplines:
+                                Production, Engineering, Automation, Design, UI, Art, VFX, Character, Animation, Audio,
+                                Tools, UX, QA, Social, Engagement, Content.</span>
+                        </div>
+                        <div
+                            class="p-5 rounded-xl bg-slate-900/40 border border-slate-700/50 hover:bg-slate-700/30 transition-colors flex items-start gap-4">
                             <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="text-slate-300 leading-relaxed">Managing both local teams as well as outsource
-                                teams of 100+ across multiple territories.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
+                            <span class="text-slate-300 leading-relaxed text-sm">Managing both local teams as well as
+                                outsource teams of 100+ across multiple territories.</span>
+                        </div>
+                        <div
+                            class="p-5 rounded-xl bg-slate-900/40 border border-slate-700/50 hover:bg-slate-700/30 transition-colors flex items-start gap-4">
                             <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="text-slate-300 leading-relaxed">Planning, resourcing, reporting, risk analysis,
-                                process, methodology and structure.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
+                            <span class="text-slate-300 leading-relaxed text-sm">Planning, resourcing, reporting, risk
+                                analysis, process, methodology and structure.</span>
+                        </div>
+                        <div
+                            class="p-5 rounded-xl bg-slate-900/40 border border-slate-700/50 hover:bg-slate-700/30 transition-colors flex items-start gap-4">
                             <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="text-slate-300 leading-relaxed">Development of AI agents and gen AI, staying
-                                current with the latest advancements in the field.</span>
-                        </li>
-                        <li class="flex items-start gap-3 md:col-span-2">
+                            <span class="text-slate-300 leading-relaxed text-sm">Development of AI agents and gen AI,
+                                staying current with the latest advancements in the field.</span>
+                        </div>
+                        <div
+                            class="p-5 rounded-xl bg-slate-900/40 border border-slate-700/50 hover:bg-slate-700/30 transition-colors flex items-start gap-4 lg:col-span-2">
                             <svg class="w-6 h-6 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="text-slate-300 leading-relaxed">Test suite creation - test scenarios,
+                            <span class="text-slate-300 leading-relaxed text-sm">Test suite creation - test scenarios,
                                 scripting, database management, reporting, dashboards.</span>
-                        </li>
-                    </ul>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Technologies & Tools Box -->
-                <div class="p-6 md:p-8 rounded-2xl bg-slate-800/50 border border-slate-700/50 shadow-lg">
-                    <h3 class="text-2xl font-semibold text-purple-400 mb-6 flex items-center gap-3">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Technologies & Tools -->
+                <div class="mt-4">
+                    <h3 class="text-2xl font-semibold text-white mb-8 flex items-center gap-3 px-2">
+                        <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
                         </svg>
                         Software, Languages & Tools
                     </h3>
-                    <div class="flex flex-wrap gap-3">
-                        <!-- Badges -->
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">C#</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Python</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Java</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">JSON</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">HTML</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Visual
-                            Studio</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">VS
-                            Code</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Xbox
-                            XDK</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Sony
-                            Neighbourhood</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Atlassian</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">DevTrack</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Devtest</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Unreal
-                            Engine</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Unity</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">FrostEd</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">ProDG</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Adobe
-                            CS</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Nintendo
-                            NDEV</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">DataDog</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">GitHub</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-emerald-400 shadow-sm">ChatGPT4</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-emerald-400 shadow-sm">Claude</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-emerald-400 shadow-sm">Gemini
-                            Pro</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">CodePen</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">JIRA</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">P4V</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Confluence</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Cursor</span>
-                        <span
-                            class="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-medium text-slate-200 shadow-sm">Antigravity</span>
+
+                    <!-- Categories Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                        <!-- Category 1: Languages (Blue) -->
+                        <div
+                            class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 shadow-lg hover:border-blue-500/50 transition-colors group">
+                            <div class="flex items-center gap-3 mb-4 border-b border-slate-700/50 pb-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-semibold text-blue-100">Languages & Data</h4>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    class="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-lg text-sm font-medium">C#</span>
+                                <span
+                                    class="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-lg text-sm font-medium">Python</span>
+                                <span
+                                    class="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-lg text-sm font-medium">Java</span>
+                                <span
+                                    class="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-lg text-sm font-medium">JSON</span>
+                                <span
+                                    class="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-lg text-sm font-medium">HTML</span>
+                            </div>
+                        </div>
+
+                        <!-- Category 2: Game Engines (Amber) -->
+                        <div
+                            class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 shadow-lg hover:border-amber-500/50 transition-colors group">
+                            <div class="flex items-center gap-3 mb-4 border-b border-slate-700/50 pb-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-semibold text-amber-100">Game Engines & Dev Kits</h4>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    class="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-sm font-medium">Unreal
+                                    Engine</span>
+                                <span
+                                    class="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-sm font-medium">Unity</span>
+                                <span
+                                    class="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-sm font-medium">FrostEd</span>
+                                <span
+                                    class="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-sm font-medium">Xbox
+                                    XDK</span>
+                                <span
+                                    class="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-sm font-medium">Sony
+                                    Neighbourhood</span>
+                                <span
+                                    class="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-sm font-medium">Nintendo
+                                    NDEV</span>
+                                <span
+                                    class="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-sm font-medium">ProDG</span>
+                            </div>
+                        </div>
+
+                        <!-- Category 3: Software (Purple) -->
+                        <div
+                            class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 shadow-lg hover:border-purple-500/50 transition-colors group">
+                            <div class="flex items-center gap-3 mb-4 border-b border-slate-700/50 pb-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-semibold text-purple-100">Environments & Software</h4>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    class="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-lg text-sm font-medium">Visual
+                                    Studio</span>
+                                <span
+                                    class="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-lg text-sm font-medium">VS
+                                    Code</span>
+                                <span
+                                    class="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-lg text-sm font-medium">Cursor</span>
+                                <span
+                                    class="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-lg text-sm font-medium">CodePen</span>
+                                <span
+                                    class="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-lg text-sm font-medium">Adobe
+                                    CS</span>
+                            </div>
+                        </div>
+
+                        <!-- Category 4: PM / Ops (Rose) -->
+                        <div
+                            class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 shadow-lg hover:border-rose-500/50 transition-colors group">
+                            <div class="flex items-center gap-3 mb-4 border-b border-slate-700/50 pb-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-semibold text-rose-100">Project Management & Ops</h4>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm font-medium">Atlassian</span>
+                                <span
+                                    class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm font-medium">JIRA</span>
+                                <span
+                                    class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm font-medium">Confluence</span>
+                                <span
+                                    class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm font-medium">GitHub</span>
+                                <span
+                                    class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm font-medium">P4V</span>
+                                <span
+                                    class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm font-medium">DevTrack</span>
+                                <span
+                                    class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm font-medium">Devtest</span>
+                                <span
+                                    class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm font-medium">DataDog</span>
+                            </div>
+                        </div>
+
+                        <!-- Category 5: AI (Emerald) -->
+                        <div
+                            class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 shadow-lg hover:border-emerald-500/50 transition-colors group md:col-span-1 lg:col-span-2 xl:col-span-2">
+                            <div class="flex items-center gap-3 mb-4 border-b border-slate-700/50 pb-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-semibold text-emerald-100">Artificial Intelligence</h4>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-lg text-sm font-bold tracking-wide shadow-sm">ChatGPT4</span>
+                                <span
+                                    class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-lg text-sm font-bold tracking-wide shadow-sm">Claude</span>
+                                <span
+                                    class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-lg text-sm font-bold tracking-wide shadow-sm">Gemini
+                                    Pro</span>
+                                <span
+                                    class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-lg text-sm font-bold tracking-wide shadow-sm">Antigravity</span>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -441,7 +542,7 @@
         <!-- 3.5. AI PROJECTS PAGE -->
         <section id="aiprojects" class="page-section w-full py-12">
             <div class="mb-12">
-                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">AI Projects</h2>
+                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">Fun &amp; Games</h2>
                 <p class="text-slate-400 text-lg">Exploring the frontiers of machine learning, generative AI, and
                     automation.</p>
             </div>
@@ -526,60 +627,61 @@
                     directly.</p>
             </div>
 
-            <div class="bg-slate-800 rounded-2xl p-8 md:p-12 border border-slate-700 shadow-xl flex flex-col gap-8">
+            <div
+                class="bg-slate-800 rounded-2xl p-6 md:p-12 border border-slate-700 shadow-xl flex flex-col gap-6 md:gap-8 w-full overflow-hidden">
 
                 <!-- Email -->
                 <a href="mailto:jamesdanielrich@gmail.com"
-                    class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
+                    class="group flex items-center gap-4 md:gap-6 p-3 md:p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
                     <div
-                        class="p-4 bg-blue-500/10 text-blue-400 rounded-full group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="p-3 md:p-4 bg-blue-500/10 text-blue-400 rounded-full group-hover:scale-110 transition-transform shrink-0">
+                        <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
                             </path>
                         </svg>
                     </div>
-                    <div>
-                        <p class="text-sm text-slate-400 font-medium mb-1">Email</p>
+                    <div class="min-w-0">
+                        <p class="text-xs md:text-sm text-slate-400 font-medium mb-1">Email</p>
                         <p
-                            class="text-lg md:text-xl text-white font-semibold group-hover:text-blue-400 transition-colors">
+                            class="text-sm sm:text-base md:text-xl text-white font-semibold group-hover:text-blue-400 transition-colors break-all">
                             jamesdanielrich@gmail.com</p>
                     </div>
                 </a>
 
                 <!-- Phone -->
                 <a href="tel:+4407958050473"
-                    class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
+                    class="group flex items-center gap-4 md:gap-6 p-3 md:p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
                     <div
-                        class="p-4 bg-emerald-500/10 text-emerald-400 rounded-full group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="p-3 md:p-4 bg-emerald-500/10 text-emerald-400 rounded-full group-hover:scale-110 transition-transform shrink-0">
+                        <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
                             </path>
                         </svg>
                     </div>
-                    <div>
-                        <p class="text-sm text-slate-400 font-medium mb-1">Phone</p>
+                    <div class="min-w-0">
+                        <p class="text-xs md:text-sm text-slate-400 font-medium mb-1">Phone</p>
                         <p
-                            class="text-lg md:text-xl text-white font-semibold group-hover:text-emerald-400 transition-colors">
+                            class="text-sm sm:text-base md:text-xl text-white font-semibold group-hover:text-emerald-400 transition-colors break-all">
                             (+44) 07958050473</p>
                     </div>
                 </a>
 
                 <!-- LinkedIn -->
                 <a href="https://www.linkedin.com/in/james-rich-london/" target="_blank"
-                    class="group flex items-center gap-6 p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
+                    class="group flex items-center gap-4 md:gap-6 p-3 md:p-4 rounded-xl hover:bg-slate-700/50 transition-all border border-transparent hover:border-slate-600">
                     <div
-                        class="p-4 bg-purple-500/10 text-purple-400 rounded-full group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                        class="p-3 md:p-4 bg-purple-500/10 text-purple-400 rounded-full group-hover:scale-110 transition-transform shrink-0">
+                        <svg class="w-6 h-6 md:w-8 md:h-8" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
                         </svg>
                     </div>
-                    <div>
-                        <p class="text-sm text-slate-400 font-medium mb-1">LinkedIn</p>
+                    <div class="min-w-0">
+                        <p class="text-xs md:text-sm text-slate-400 font-medium mb-1">LinkedIn</p>
                         <p
-                            class="text-lg md:text-xl text-white font-semibold group-hover:text-purple-400 transition-colors truncate">
+                            class="text-sm sm:text-base md:text-xl text-white font-semibold group-hover:text-purple-400 transition-colors truncate">
                             linkedin.com/in/james-rich-london</p>
                     </div>
                 </a>
@@ -653,9 +755,8 @@
         const heroVideo = document.getElementById('hero-video');
         if (heroVideo) {
             // Add your MP4 video paths to this array
-            const videoPlaylist = [
-                'images/JamesRichVideo.mp4',
-                'images/keybenefits_anim.mp4',
+            const videoPlaylist = [      
+                'images/BattleFront2&NeedForSpeedShort.mp4',
                 // 'images/a_third_video.mp4'
             ];
 

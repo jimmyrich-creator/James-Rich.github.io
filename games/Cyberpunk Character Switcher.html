@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interactive Cyberpunk Character</title>
+    <style>
+        :root {
+            --lookX: 0; 
+            --lookY: 0; 
+            
+            --skin-base: #1a5b6e;
+            --skin-shadow: #0d3240;
+            --hair-dark: #071d2b;
+            --hair-light: #165a72;
+            --glasses-glow: #00ff44;
+            --glasses-fill: rgba(0, 255, 100, 0.25); 
+            --lips: #8a0b29;
+            --moon: #fdfae4;
+            --jacket: #2b3a2b;
+            --skin-highlight: #2a819e;
+            --tattoo-glow: #00ffff;
+            --hair-highlight: #2288aa;
+            --iris-color: #00ffcc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #050811;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: sans-serif;
+            color: white;
+            touch-action: none; /* Crucial for preventing mobile scroll/refresh during swipe */
+        }
+
+        /* Instructions overlay */
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 68, 0.3);
+            text-shadow: 0 0 5px var(--glasses-glow);
+            z-index: 100;
+            pointer-events: none;
+            letter-spacing: 1px;
+            text-align: center;
+            line-height: 1.4;
+            width: 90%;
+            max-width: 320px;
+        }
+
+        /* Mobile Controls Panel */
+        .controls-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+            width: 90%;
+            max-width: 400px;
+            justify-content: space-between;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex: 1;
+            background: rgba(0, 20, 10, 0.75);
+            border: 1px solid var(--glasses-glow);
+            padding: 8px 12px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0, 255, 68, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .control-group span {
+            color: var(--glasses-glow);
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px var(--glasses-glow);
+        }
+
+        .control-group button {
+            background: #020810;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            border-radius: 6px;
+            width: 34px;
+            height: 34px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: inset 0 0 5px rgba(0, 255, 204, 0.2);
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .control-group button:active {
+            background: #00ffcc;
+            color: #000;
+            box-shadow: 0 0 15px #00ffcc;
+            transform: scale(0.95);
+        }
+
+        .scene-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .scene {
+            position: relative;
+            width: 400px;
+            height: 500px;
+            perspective: 1000px; 
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease;
+        }
+
+        /* Responsive Scaling for Mobile Screens */
+        @media (max-width: 500px) {
+            .scene {
+                transform: scale(0.85);
+            }
+            .instructions {
+                font-size: 12px;
+            }
+        }
+        @media (max-width: 380px) {
+            .scene {
+                transform: scale(0.7);
+            }
+            .controls-panel {
+                flex-direction: column;
+                gap: 10px;
+                bottom: 10px;
+            }
+            .control-group {
+                padding: 6px 10px;
+            }
+        }
+        @media (max-height: 700px) {
+            .scene {
+                transform: scale(0.7);
+            }
+        }
+
+        .layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+
+        /* 1. Background */
+        .layer-bg {
+            transform: translateZ(-100px) translateX(calc(var(--lookX) * -8px)) rotateY(calc(var(--lookX) * -5deg)) scale(1.2);
+            background: radial-gradient(circle at center, #091a28 0%, #02050a 100%);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .neon-pillar-1 {
+            position: absolute;
+            left: 10%; top: -10%; width: 45px; height: 120%;
+            background: #020810;
+            border-right: 2px solid #00ffaa;
+            box-shadow: 4px 0 25px rgba(0, 255, 170, 0.4);
+        }
+
+        .neon-pillar-2 {
+            position: absolute;
+            right: 5%; top: -10%; width: 60px; height: 120%;
+            background: #020810;
+            border-left: 2px solid #ff0055;
+            box-shadow: -4px 0 25px rgba(255, 0, 85, 0.4);
+        }
+
+        .cyber-sign {
+            position: absolute;
+            right: 15%; top: 15%;
+            color: #00ffcc;
+            font-size: 20px; font-weight: bold; font-family: sans-serif;
+            writing-mode: vertical-rl;
+            text-shadow: 0 0 8px #00ffcc, 0 0 15px #00ffcc;
+            border: 2px solid #00ffcc;
+            padding: 12px 6px;
+            background: rgba(0, 25, 20, 0.7);
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px #00ffcc, 0 0 15px rgba(0, 255, 204, 0.3);
+        }
+
+        .bokeh-light {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(20px);
+            opacity: 0.6;
+            animation: pulse 4s infinite alternate ease-in-out;
+        }
+        
+        .b-cyan { width: 80px; height: 80px; top: 25%; left: 25%; background: #00ffff; }
+        .b-pink { width: 120px; height: 120px; bottom: 25%; right: 25%; background: #ff00aa; animation-delay: -2s; }
+        .b-purple { width: 90px; height: 90px; top: 60%; left: 15%; background: #aa00ff; animation-delay: -1s;}
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(1.4); opacity: 0.7; }
+        }
+        
+        .grid-floor {
+            position: absolute;
+            bottom: 0; left: -50%; width: 200%; height: 35%;
+            background-image:
+                linear-gradient(rgba(255, 0, 85, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 85, 0.4) 1px, transparent 1px);
+            background-size: 20px 20px;
+            transform: perspective(300px) rotateX(70deg) translateY(20px);
+            mask-image: linear-gradient(to top, black, transparent);
+            -webkit-mask-image: linear-gradient(to top, black, transparent);
+        }
+
+        /* 3. Base Head & Body */
+        .layer-head {
+            transform: translateZ(20px) translateX(calc(var(--lookX) * 5px)) rotateY(calc(var(--lookX) * 15deg));
+        }
+
+        .jacket {
+            position: absolute;
+            width: 340px; height: 160px;
+            background: 
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.3) 0px, rgba(0,0,0,0.3) 2px, transparent 2px, transparent 5px),
+                repeating-linear-gradient(-45deg, rgba(0,0,0,0.3) 0px, rgba(0,0,0,0.3) 2px, transparent 2px, transparent 5px),
+                linear-gradient(180deg, #1f2a1f, var(--jacket));
+            bottom: -20px;
+            border-radius: 35% 35% 0 0;
+            border: 2px solid #112211;
+            box-shadow: inset 0 30px 40px rgba(0,0,0,0.9), 0 -5px 15px rgba(0,0,0,0.5);
+        }
+
+        .jacket-collar {
+            position: absolute; width: 100px; height: 110px;
+            background: linear-gradient(135deg, #111, #222);
+            top: -40px;
+            border-radius: 10px;
+            border: 2px solid #334433;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 10px 20px rgba(0,0,0,0.9);
+        }
+        .jacket-collar.left { left: 70px; transform: rotate(-20deg); border-right: 2px solid var(--glasses-glow); }
+        .jacket-collar.right { right: 70px; transform: rotate(20deg); border-left: 2px solid var(--glasses-glow); }
+
+        .neck {
+            position: absolute;
+            width: 65px; height: 90px;
+            background: linear-gradient(to right, var(--skin-shadow), var(--skin-base), var(--skin-shadow));
+            bottom: 110px;
+            border-radius: 10px;
+            box-shadow: inset 0 30px 20px rgba(0,0,0,0.6);
+        }
+        .cyber-wire {
+            position: absolute; width: 40px; height: 4px;
+            background: #111; border-top: 1px solid #555;
+            top: 40px; left: 12px; border-radius: 2px;
+            box-shadow: 0 5px 5px rgba(0,0,0,0.5);
+        }
+
+        .ear {
+            position: absolute;
+            width: 30px; height: 55px;
+            background: linear-gradient(135deg, var(--skin-base), var(--skin-shadow));
+            top: 205px;
+            border-radius: 50%;
+            border-left: 2px solid rgba(255,255,255,0.1);
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.5);
+        }
+        .ear.left { left: 95px; transform: rotate(-15deg); }
+        .ear.right { right: 95px; transform: rotate(15deg); }
+        
+        .ear-detail {
+            position: absolute; width: 12px; height: 25px;
+            border-radius: 50%; border: 2px solid rgba(0,0,0,0.2);
+            border-left: 2px solid rgba(255,255,255,0.1);
+            top: 10px; left: 8px;
+        }
+
+        .earring {
+            position: absolute;
+            width: 8px; height: 8px;
+            background: #ffaa00;
+            border-radius: 50%;
+            bottom: 5px; left: 8px;
+            box-shadow: 0 0 8px #ffaa00;
+        }
+        .earring.e2 { bottom: 18px; left: 3px; width: 5px; height: 5px; }
+
+        .face-base {
+            position: absolute;
+            width: 160px; height: 230px;
+            background: radial-gradient(circle at 40% 30%, var(--skin-highlight) 0%, var(--skin-base) 40%, var(--skin-shadow) 100%);
+            top: 110px;
+            border-radius: 40% 40% 50% 50% / 30% 30% 65% 65%;
+            box-shadow: 
+                inset -15px -25px 40px rgba(0,0,0,0.8), 
+                inset 8px 8px 15px rgba(255,255,255,0.2),
+                0 15px 20px rgba(0,0,0,0.5);
+        }
+        
+        .contour {
+            position: absolute; border-radius: 50%;
+            background: rgba(0,0,0,0.2); filter: blur(8px);
+        }
+        .contour.left { width: 20px; height: 70px; left: 15px; top: 110px; }
+        .contour.right { width: 20px; height: 70px; right: 15px; top: 110px; }
+        
+        .chin-highlight {
+            position: absolute; width: 40px; height: 15px;
+            bottom: 15px; left: 60px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%; filter: blur(3px);
+        }
+
+        .face-tattoo {
+            position: absolute; top: 85px; left: 25px;
+            width: 20px; height: 35px;
+            background: repeating-linear-gradient(0deg, var(--tattoo-glow) 0px, var(--tattoo-glow) 2px, transparent 2px, transparent 6px);
+            clip-path: polygon(0 0, 100% 20%, 80% 100%, 20% 80%);
+            opacity: 0.75;
+            box-shadow: 0 0 10px var(--tattoo-glow);
+            transform: rotate(-15deg);
+        }
+
+        /* 4. Facial Features */
+        .layer-features {
+            transform: translateZ(28px) translateX(calc(var(--lookX) * 15px)) translateY(calc(var(--lookY) * 5px)) rotateY(calc(var(--lookX) * 22deg));
+        }
+
+        .nose {
+            position: absolute;
+            width: 12px; height: 35px;
+            background: linear-gradient(to right, rgba(255,255,255,0.25), transparent, rgba(0,0,0,0.2));
+            top: 235px;
+            border-radius: 10px 10px 5px 5px;
+            box-shadow: -4px 0 10px rgba(0,0,0,0.15);
+        }
+        .nostril {
+            position: absolute; width: 6px; height: 6px;
+            background: rgba(0,0,0,0.4); border-radius: 50%;
+            bottom: -2px;
+        }
+        .nostril.left { left: -4px; }
+        .nostril.right { right: -4px; }
+
+        .lips {
+            position: absolute;
+            width: 46px; height: 22px;
+            top: 283px;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5));
+        }
+
+        .lip-top-left, .lip-top-right {
+            position: absolute;
+            width: 23px; height: 10px;
+            background: linear-gradient(to bottom, #d6244c, #800a26);
+            top: 0;
+            box-shadow: inset 0 2px 3px rgba(255,255,255,0.25);
+        }
+        .lip-top-left { left: 0; border-radius: 12px 8px 2px 10px; transform-origin: right bottom; transform: rotate(10deg); }
+        .lip-top-right { right: 0; border-radius: 8px 12px 10px 2px; transform-origin: left bottom; transform: rotate(-10deg); }
+
+        .lip-bottom {
+            position: absolute;
+            width: 40px; height: 12px;
+            background: linear-gradient(to bottom, #500315, var(--lips));
+            bottom: 0; left: 3px;
+            border-radius: 4px 4px 20px 20px;
+            box-shadow: inset 0 -2px 6px rgba(0,0,0,0.7);
+        }
+        .lip-bottom::after {
+            content: '';
+            position: absolute; width: 18px; height: 4px;
+            background: rgba(255,255,255,0.35); border-radius: 50%;
+            top: 4px; left: 11px; filter: blur(1px);
+        }
+        .mouth-line {
+            position: absolute; width: 48px; height: 4px;
+            background: #1a0005; top: 8px; left: -1px;
+            border-radius: 50%; box-shadow: 0 1px 1px rgba(255,255,255,0.15);
+        }
+
+        /* 4.5. Eyes (Dynamic Multi-Style Setup) */
+        .layer-eyes {
+            transform: translateZ(26px) translateX(calc(var(--lookX) * 12px)) translateY(calc(var(--lookY) * 5px)) rotateY(calc(var(--lookX) * 20deg));
+        }
+
+        .eye-container {
+            position: absolute;
+            display: flex;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .eye {
+            position: relative;
+            background: #e6e6e6;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .iris, .pupil, .eyelid {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Eyes Style Blocks */
+        .eye-container[data-style="1"] { top: 195px; gap: 40px; }
+        .eye-container[data-style="1"] .eye { width: 60px; height: 28px; box-shadow: inset 0 8px 12px rgba(0,0,0,0.6), 0 0 10px rgba(0,255,200,0.2); border-top: 4px solid #111; border-bottom: 2px solid #222; }
+        .eye-container[data-style="1"] .eye.left { transform: rotate(-5deg); border-radius: 80% 20% 70% 30% / 70% 30% 80% 20%; }
+        .eye-container[data-style="1"] .eye.right { transform: rotate(5deg); border-radius: 20% 80% 30% 70% / 30% 70% 20% 80%; }
+        .eye-container[data-style="1"] .iris { width: 26px; height: 26px; background: radial-gradient(circle, var(--iris-color) 30%, #007766 100%); border-radius: 50%; position: absolute; top: -2px; left: 17px; box-shadow: inset 0 0 6px rgba(0,0,0,0.8); }
+        .eye-container[data-style="1"] .pupil { width: 10px; height: 10px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="2"] { top: 195px; gap: 65px; }
+        .eye-container[data-style="2"] .eye { width: 55px; height: 26px; box-shadow: inset 0 8px 10px rgba(0,0,0,0.5); border-top: 3px solid #111; border-bottom: 2px solid #222; }
+        .eye-container[data-style="2"] .eye.left { transform: rotate(-2deg); border-radius: 70% 30% 60% 40% / 60% 40% 70% 30%; }
+        .eye-container[data-style="2"] .eye.right { transform: rotate(2deg); border-radius: 30% 70% 40% 60% / 40% 60% 30% 70%; }
+        .eye-container[data-style="2"] .iris { width: 24px; height: 24px; background: radial-gradient(circle, #00eeff 30%, #005577 100%); border-radius: 50%; position: absolute; top: 0px; left: 15px; }
+        .eye-container[data-style="2"] .pupil { width: 8px; height: 8px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="3"] { top: 185px; gap: 45px; }
+        .eye-container[data-style="3"] .eye { width: 65px; height: 24px; border-top: 5px solid #000; border-bottom: 1px solid #333; }
+        .eye-container[data-style="3"] .eye.left { transform: rotate(-15deg); border-radius: 80% 0% 80% 20% / 80% 20% 80% 0%; }
+        .eye-container[data-style="3"] .eye.right { transform: rotate(15deg); border-radius: 0% 80% 20% 80% / 20% 80% 0% 80%; }
+        .eye-container[data-style="3"] .iris { width: 22px; height: 22px; background: radial-gradient(circle, #ff00aa 30%, #550055 100%); border-radius: 50%; position: absolute; top: -1px; left: 21px; }
+        .eye-container[data-style="3"] .pupil { width: 8px; height: 8px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="4"] { top: 205px; gap: 40px; }
+        .eye-container[data-style="4"] .eye { width: 55px; height: 30px; border-top: 2px solid #222; border-bottom: 5px solid #000; }
+        .eye-container[data-style="4"] .eye.left { transform: rotate(8deg); border-radius: 30% 70% 40% 60% / 40% 60% 30% 70%; }
+        .eye-container[data-style="4"] .eye.right { transform: rotate(-8deg); border-radius: 70% 30% 60% 40% / 60% 40% 70% 30%; }
+        .eye-container[data-style="4"] .iris { width: 26px; height: 26px; background: radial-gradient(circle, #55ff00 30%, #115500 100%); border-radius: 50%; position: absolute; top: 2px; left: 14px; }
+        .eye-container[data-style="4"] .pupil { width: 12px; height: 12px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="5"] { top: 185px; gap: 35px; }
+        .eye-container[data-style="5"] .eye { width: 60px; height: 45px; border-top: 6px solid #111; border-bottom: 2px solid #222; }
+        .eye-container[data-style="5"] .eye.left { transform: rotate(-3deg); border-radius: 50% 50% 40% 40%; }
+        .eye-container[data-style="5"] .eye.right { transform: rotate(3deg); border-radius: 50% 50% 40% 40%; }
+        .eye-container[data-style="5"] .iris { width: 36px; height: 36px; background: radial-gradient(circle, #aa00ff 30%, #330055 100%); border-radius: 50%; position: absolute; top: 2px; left: 12px; }
+        .eye-container[data-style="5"] .pupil { width: 14px; height: 20px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="6"] { top: 198px; gap: 45px; }
+        .eye-container[data-style="6"] .eye { width: 60px; height: 14px; border-top: 4px solid #000; border-bottom: 3px solid #111; }
+        .eye-container[data-style="6"] .eye.left { transform: rotate(-6deg); border-radius: 80% 20% 70% 30% / 70% 30% 80% 20%; }
+        .eye-container[data-style="6"] .eye.right { transform: rotate(6deg); border-radius: 20% 80% 30% 70% / 30% 70% 20% 80%; }
+        .eye-container[data-style="6"] .iris { width: 20px; height: 20px; background: radial-gradient(circle, #fff 30%, #888 100%); border-radius: 50%; position: absolute; top: -4px; left: 20px; }
+        .eye-container[data-style="6"] .pupil { width: 6px; height: 6px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="7"] { top: 195px; gap: 40px; }
+        .eye-container[data-style="7"] .eye { width: 50px; height: 25px; background: #050505; border: 2px solid #ff0055; box-shadow: 0 0 15px rgba(255,0,85,0.6); border-radius: 4px; }
+        .eye-container[data-style="7"] .eye.left { transform: rotate(0deg); }
+        .eye-container[data-style="7"] .eye.right { transform: rotate(0deg); }
+        .eye-container[data-style="7"] .iris { width: 22px; height: 22px; background: radial-gradient(circle, #ff0055, #440011); border-radius: 4px; position: absolute; top: 0px; left: 14px; box-shadow: 0 0 10px #ff0055; }
+        .eye-container[data-style="7"] .pupil { width: 6px; height: 14px; background: #fff; border-radius: 2px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="8"] { top: 190px; gap: 45px; }
+        .eye-container[data-style="8"] .eye { width: 55px; height: 32px; border-top: 5px solid #000; border-bottom: 2px solid #222; }
+        .eye-container[data-style="8"] .eye.left { transform: rotate(-22deg); border-radius: 0% 100% 0% 100% / 0% 100% 0% 100%; }
+        .eye-container[data-style="8"] .eye.right { transform: rotate(22deg); border-radius: 100% 0% 100% 0% / 100% 0% 100% 0%; }
+        .eye-container[data-style="8"] .iris { width: 28px; height: 28px; background: radial-gradient(circle, #ffcc00, #aa5500); border-radius: 50%; position: absolute; top: 0px; left: 13px; }
+        .eye-container[data-style="8"] .pupil { width: 4px; height: 22px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="9"] { top: 195px; gap: 40px; }
+        .eye-container[data-style="9"] .eye.left { width: 65px; height: 35px; transform: rotate(-8deg); top: -5px; border-radius: 80% 20% 70% 30% / 70% 30% 80% 20%; border-top: 4px solid #111; }
+        .eye-container[data-style="9"] .eye.right { width: 45px; height: 18px; transform: rotate(15deg); top: 8px; border-radius: 20% 80% 30% 70% / 30% 70% 20% 80%; border-top: 2px solid #111; }
+        .eye-container[data-style="9"] .eye.left .iris { width: 30px; height: 30px; background: radial-gradient(circle, #00ffff, #004444); border-radius: 50%; position: absolute; top: 0px; left: 17px; }
+        .eye-container[data-style="9"] .eye.right .iris { width: 16px; height: 16px; background: radial-gradient(circle, #ff00ff, #440044); border-radius: 50%; position: absolute; top: 0px; left: 14px; }
+        .eye-container[data-style="9"] .eye.left .pupil { width: 12px; height: 12px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .eye-container[data-style="9"] .eye.right .pupil { width: 6px; height: 6px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .eye-container[data-style="0"] { top: 195px; gap: 28px; }
+        .eye-container[data-style="0"] .eye { width: 55px; height: 25px; box-shadow: inset 0 15px 15px rgba(0,0,0,0.95); border-top: 6px solid #050505; border-bottom: 1px solid #111; }
+        .eye-container[data-style="0"] .eye.left { transform: rotate(-3deg); border-radius: 60% 40% 70% 30% / 70% 30% 80% 20%; }
+        .eye-container[data-style="0"] .eye.right { transform: rotate(3deg); border-radius: 40% 60% 30% 70% / 30% 70% 20% 80%; }
+        .eye-container[data-style="0"] .iris { width: 24px; height: 24px; background: radial-gradient(circle, #55aaff, #003366); border-radius: 50%; position: absolute; top: 0px; left: 15px; box-shadow: inset 0 6px 10px rgba(0,0,0,0.8); }
+        .eye-container[data-style="0"] .pupil { width: 8px; height: 8px; background: #000; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .iris { transform: translateX(calc(var(--lookX) * 8px)) translateY(calc(var(--lookY) * 3px)); }
+
+        .eyelid {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, var(--skin-shadow), var(--skin-base));
+            z-index: 10;
+            transform-origin: top;
+            animation: blink 10s infinite;
+            border-bottom: 4px solid #050505; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+        }
+
+        @keyframes blink {
+            0%, 97%, 100% { transform: scaleY(0); }
+            98.5% { transform: scaleY(1); } 
+        }
+
+        .eye-reflection {
+            position: absolute;
+            width: 8px; height: 8px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            top: 6px; left: 6px;
+            filter: blur(0.5px);
+        }
+
+
+        /* 5. Glasses */
+        .layer-glasses {
+            transform: translateZ(55px) translateX(calc(var(--lookX) * 28px)) translateY(calc(var(--lookY) * 8px)) rotateY(calc(var(--lookX) * 35deg));
+        }
+
+        .glasses-container {
+            position: absolute;
+            top: 175px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            filter: drop-shadow(0 15px 15px rgba(0, 255, 100, 0.15));
+        }
+
+        .lens {
+            width: 110px; height: 80px;
+            background: var(--glasses-fill);
+            border: 5px solid var(--glasses-glow);
+            box-shadow: 0 0 20px var(--glasses-glow), inset 0 0 25px var(--glasses-glow);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+        }
+
+        .lens.left { border-radius: 0 100% 0 100%; transform: rotate(-18deg); }
+        .lens.right { border-radius: 100% 0 100% 0; transform: rotate(18deg); }
+
+        .lens::after {
+            content: '';
+            position: absolute;
+            top: -20px; left: -20px;
+            width: 40px; height: 160px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+            transform: rotate(45deg);
+        }
+
+        .glasses-bridge {
+            position: absolute; width: 30px; height: 6px;
+            background: var(--glasses-glow); top: 32px; left: 95px;
+            box-shadow: 0 0 12px var(--glasses-glow); border-radius: 3px;
+        }
+
+
+        /* 6. Hair Animation & Layers Base */
+        .layer-hair-back { transform: translateZ(-20px) translateX(calc(var(--lookX) * -15px)) rotateY(calc(var(--lookX) * -10deg)); }
+        .layer-hair-mid { transform: translateZ(70px) translateX(calc(var(--lookX) * 35px)) translateY(calc(var(--lookY) * 10px)) rotateY(calc(var(--lookX) * 40deg)); }
+        .layer-hair-front { transform: translateZ(90px) translateX(calc(var(--lookX) * 45px)) translateY(calc(var(--lookY) * 12px)) rotateY(calc(var(--lookX) * 50deg)); }
+        .layer-hair-forefront { transform: translateZ(120px) translateX(calc(var(--lookX) * 55px)) translateY(calc(var(--lookY) * 15px)) rotateY(calc(var(--lookX) * 60deg)); }
+
+        .hair-back-shape, .spike {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* -------------------------------------------------------------
+           HAIRSTYLE VARIANTS (1-10)
+           ------------------------------------------------------------- */
+
+        /* STYLE 1: Default (Messy Anime Bangs) */
+        .hair-back-shape {
+            position: absolute; width: 220px; height: 260px; top: 70px;
+            background: repeating-linear-gradient(to right, transparent, transparent 5px, rgba(255,255,255,0.03) 6px, rgba(0,0,0,0.2) 8px), var(--hair-dark);
+            border-radius: 40% 40% 20% 20%; box-shadow: inset 0 -20px 40px rgba(0,0,0,0.8);
+        }
+
+        .spike {
+            position: absolute;
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.2) 100%), repeating-linear-gradient(to right, transparent, transparent 3px, rgba(255,255,255,0.08) 4px, rgba(0,0,0,0.15) 5px), linear-gradient(to bottom, var(--hair-dark), var(--hair-light) 80%, var(--hair-highlight));
+            clip-path: polygon(10% 0, 90% 0, 50% 100%, 50% 100%);
+            border-radius: 3px; filter: drop-shadow(0 8px 10px rgba(0,0,0,0.6));
+        }
+
+        .spike.thin { background: linear-gradient(to bottom, var(--hair-highlight), #4cd1ff); clip-path: polygon(30% 0, 70% 0, 50% 100%, 50% 100%); filter: drop-shadow(0 0 8px rgba(34, 136, 170, 0.6)); opacity: 0.9; }
+
+        .s7 { width: 80px; height: 180px; top: 40px; left: 80px; transform: rotate(25deg); background: linear-gradient(to bottom, var(--hair-dark), var(--skin-shadow)); }
+        .s8 { width: 90px; height: 190px; top: 30px; left: 220px; transform: rotate(-25deg); background: linear-gradient(to bottom, var(--hair-dark), var(--skin-shadow)); }
+        .s13 { width: 100px; height: 150px; top: 20px; left: 140px; transform: rotate(0deg); }
+        .s1 { width: 65px; height: 160px; top: 60px; left: 100px; transform: rotate(15deg); }
+        .s2 { width: 75px; height: 170px; top: 50px; left: 145px; transform: rotate(2deg); background: repeating-linear-gradient(to right, transparent, transparent 3px, rgba(255,255,255,0.08) 4px, rgba(0,0,0,0.15) 5px), linear-gradient(to bottom, var(--hair-light), var(--hair-dark)); }
+        .s3 { width: 60px; height: 150px; top: 70px; left: 195px; transform: rotate(-18deg); }
+        .s4 { width: 55px; height: 130px; top: 80px; left: 60px; transform: rotate(38deg); }
+        .s5 { width: 65px; height: 140px; top: 70px; left: 245px; transform: rotate(-35deg); }
+        .s6 { width: 45px; height: 110px; top: 110px; left: 215px; transform: rotate(-22deg); }
+        .s9 { width: 18px; height: 120px; top: 80px; left: 130px; transform: rotate(8deg); }
+        .s10 { width: 15px; height: 100px; top: 90px; left: 180px; transform: rotate(-12deg); }
+        .s11 { width: 22px; height: 140px; top: 60px; left: 90px; transform: rotate(25deg); }
+        .s12 { width: 16px; height: 130px; top: 70px; left: 260px; transform: rotate(-30deg); }
+
+        /* STYLE 2: Corporate Slickback */
+        [data-hairstyle="2"] .hair-back-shape { width: 180px; height: 200px; top: 90px; border-radius: 50% 50% 10% 10%; }
+        [data-hairstyle="2"] .spike { clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%); }
+        [data-hairstyle="2"] .s1, [data-hairstyle="2"] .s2, [data-hairstyle="2"] .s3 { top: 30px; height: 80px; transform: rotate(0deg); opacity: 0.8; }
+        [data-hairstyle="2"] .s4, [data-hairstyle="2"] .s5, [data-hairstyle="2"] .s6, [data-hairstyle="2"] .thin { opacity: 0; }
+        [data-hairstyle="2"] .s7, [data-hairstyle="2"] .s8 { height: 120px; top: 50px; transform: rotate(0deg); }
+        [data-hairstyle="2"] .s7 { left: 80px; } [data-hairstyle="2"] .s8 { left: 240px; }
+        [data-hairstyle="2"] .s13 { height: 80px; top: 20px; }
+
+        /* STYLE 3: Street Punk Mohawk */
+        [data-hairstyle="3"] .hair-back-shape { width: 60px; height: 250px; top: 30px; background: #ff0055; border-radius: 20px; box-shadow: 0 0 20px #ff0055; }
+        [data-hairstyle="3"] .s4, [data-hairstyle="3"] .s5, [data-hairstyle="3"] .s7, [data-hairstyle="3"] .s8, [data-hairstyle="3"] .s6, [data-hairstyle="3"] .thin { opacity: 0; }
+        [data-hairstyle="3"] .s1, [data-hairstyle="3"] .s3 { width: 30px; height: 180px; top: -50px; background: linear-gradient(to top, var(--hair-dark), #ff0055); transform: rotate(0deg); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0% 100%); }
+        [data-hairstyle="3"] .s1 { left: 140px; } [data-hairstyle="3"] .s3 { left: 190px; }
+        [data-hairstyle="3"] .s2 { width: 40px; height: 220px; top: -80px; left: 160px; background: linear-gradient(to top, var(--hair-dark), #ff0055); transform: rotate(0deg); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0% 100%); }
+        [data-hairstyle="3"] .s13 { height: 250px; top: -100px; transform: rotate(0deg); background: linear-gradient(to top, var(--hair-dark), #ff00aa); }
+
+        /* STYLE 4: Hacker Geometric Bob */
+        [data-hairstyle="4"] .hair-back-shape { border-radius: 40% 40% 0 0; height: 200px; }
+        [data-hairstyle="4"] .spike { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); border-radius: 0; }
+        [data-hairstyle="4"] .s1, [data-hairstyle="4"] .s2, [data-hairstyle="4"] .s3 { height: 100px; top: 60px; transform: rotate(0deg); width: 80px; }
+        [data-hairstyle="4"] .s1 { left: 80px; } [data-hairstyle="4"] .s2 { left: 160px; } [data-hairstyle="4"] .s3 { left: 240px; }
+        [data-hairstyle="4"] .s4, [data-hairstyle="4"] .s5, [data-hairstyle="4"] .s6, [data-hairstyle="4"] .thin { opacity: 0; }
+        [data-hairstyle="4"] .s7, [data-hairstyle="4"] .s8 { height: 160px; transform: rotate(0deg); width: 100px; }
+        [data-hairstyle="4"] .s7 { left: 60px; } [data-hairstyle="4"] .s8 { left: 240px; }
+
+        /* STYLE 5: Gravity Defying Long */
+        [data-hairstyle="5"] .hair-back-shape { height: 400px; width: 280px; top: 50px; border-radius: 40% 40% 50% 50%; }
+        [data-hairstyle="5"] .spike { height: 300px; clip-path: polygon(20% 0, 80% 0, 50% 100%, 50% 100%); }
+        [data-hairstyle="5"] .s7 { left: 30px; transform: rotate(15deg); } [data-hairstyle="5"] .s8 { left: 270px; transform: rotate(-15deg); }
+        [data-hairstyle="5"] .s1, [data-hairstyle="5"] .s3 { height: 200px; }
+        [data-hairstyle="5"] .s4 { left: 20px; transform: rotate(30deg); height: 250px; }
+        [data-hairstyle="5"] .s5 { left: 280px; transform: rotate(-30deg); height: 250px; }
+
+        /* STYLE 6: Anime Twin Tails */
+        [data-hairstyle="6"] .hair-back-shape { height: 150px; width: 180px; border-radius: 50%; top: 70px; }
+        [data-hairstyle="6"] .s7 { width: 140px; height: 350px; left: -20px; top: 50px; transform: rotate(20deg); clip-path: polygon(30% 0, 70% 0, 100% 100%, 0% 100%); border-radius: 50% 50% 10% 10%; background: linear-gradient(to bottom, var(--hair-highlight), var(--hair-dark)); }
+        [data-hairstyle="6"] .s8 { width: 140px; height: 350px; left: 280px; top: 50px; transform: rotate(-20deg); clip-path: polygon(30% 0, 70% 0, 100% 100%, 0% 100%); border-radius: 50% 50% 10% 10%; background: linear-gradient(to bottom, var(--hair-highlight), var(--hair-dark)); }
+        [data-hairstyle="6"] .s1, [data-hairstyle="6"] .s2, [data-hairstyle="6"] .s3 { height: 90px; }
+
+        /* STYLE 7: Cyber-Dreadlocks */
+        [data-hairstyle="7"] .spike { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); border-radius: 15px; background: repeating-linear-gradient(to bottom, #111 0px, #111 4px, #333 4px, #333 8px); box-shadow: 2px 2px 5px rgba(0,0,0,0.8); }
+        [data-hairstyle="7"] .hair-back-shape { background: repeating-linear-gradient(to bottom, #111 0px, #111 4px, #333 4px, #333 8px); border-radius: 50% 50% 0 0; height: 220px; }
+        [data-hairstyle="7"] .thin { opacity: 0; }
+        [data-hairstyle="7"] .s1, [data-hairstyle="7"] .s2, [data-hairstyle="7"] .s3 { height: 160px; width: 25px; transform: rotate(0deg); top: 60px; }
+        [data-hairstyle="7"] .s1 { left: 110px; } [data-hairstyle="7"] .s2 { left: 160px; } [data-hairstyle="7"] .s3 { left: 210px; }
+        [data-hairstyle="7"] .s4, [data-hairstyle="7"] .s5 { height: 180px; width: 20px; transform: rotate(0deg); top: 70px; }
+        [data-hairstyle="7"] .s4 { left: 70px; } [data-hairstyle="7"] .s5 { left: 250px; }
+        [data-hairstyle="7"] .s7, [data-hairstyle="7"] .s8 { height: 240px; width: 30px; transform: rotate(0deg); border-radius: 15px; }
+        [data-hairstyle="7"] .s7 { left: 40px; } [data-hairstyle="7"] .s8 { left: 290px; }
+
+        /* STYLE 8: Mercenary Buzz Cut */
+        [data-hairstyle="8"] .hair-back-shape { width: 170px; height: 180px; top: 80px; border-radius: 50% 50% 30% 30%; background: repeating-radial-gradient(circle at 50% 20%, rgba(255,255,255,0.1) 0px, transparent 2px), var(--hair-dark); }
+        [data-hairstyle="8"] .spike { opacity: 0; }
+        [data-hairstyle="8"] .s2 { opacity: 1; height: 30px; top: 70px; width: 100px; left: 130px; clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%); background: var(--hair-dark); }
+
+        /* STYLE 9: Asymmetrical Undercut */
+        [data-hairstyle="9"] .hair-back-shape { border-radius: 80% 20% 20% 50%; }
+        [data-hairstyle="9"] .s4, [data-hairstyle="9"] .s1, [data-hairstyle="9"] .s7, [data-hairstyle="9"] .s11, [data-hairstyle="9"] .s9 { opacity: 0; } 
+        [data-hairstyle="9"] .s8 { left: 200px; width: 150px; height: 250px; transform: rotate(-40deg); top: 20px; }
+        [data-hairstyle="9"] .s5 { left: 180px; width: 100px; height: 200px; transform: rotate(-50deg); top: 50px; }
+        [data-hairstyle="9"] .s2, [data-hairstyle="9"] .s3 { transform: rotate(-30deg); height: 180px; left: 160px; top: 30px; }
+        [data-hairstyle="9"] .s12, [data-hairstyle="9"] .s10 { transform: rotate(-40deg); left: 220px; }
+
+        /* STYLE 10: Energy / Super Saiyan Aura */
+        [data-hairstyle="10"] .hair-back-shape { opacity: 0; }
+        [data-hairstyle="10"] .spike { background: linear-gradient(to top, #fff, #00ffff, transparent); filter: drop-shadow(0 0 15px #00ffff); clip-path: polygon(40% 100%, 60% 100%, 50% 0%, 50% 0%); }
+        [data-hairstyle="10"] .s13 { height: 220px; top: -100px; transform: rotate(0deg); }
+        [data-hairstyle="10"] .s7 { height: 200px; top: -60px; left: 60px; transform: rotate(-30deg); }
+        [data-hairstyle="10"] .s8 { height: 200px; top: -60px; left: 240px; transform: rotate(30deg); }
+        [data-hairstyle="10"] .s1 { height: 160px; top: -40px; left: 90px; transform: rotate(-15deg); }
+        [data-hairstyle="10"] .s2 { height: 180px; top: -50px; left: 140px; transform: rotate(5deg); }
+        [data-hairstyle="10"] .s3 { height: 160px; top: -40px; left: 190px; transform: rotate(20deg); }
+        [data-hairstyle="10"] .s4 { height: 120px; top: 0px; left: 40px; transform: rotate(-50deg); }
+        [data-hairstyle="10"] .s5 { height: 120px; top: 0px; left: 260px; transform: rotate(50deg); }
+        [data-hairstyle="10"] .thin { opacity: 0; }
+
+    </style>
+</head>
+<body>
+
+    <div class="instructions">
+        Swipe screen or drag mouse to move head!<br>
+        <small style="color:#aaa;">(Keyboard Arrows & Z/X still work)</small>
+    </div>
+    
+    <div class="scene-container">
+        <!-- Added data-hairstyle attribute to parent scene to control hair CSS -->
+        <div class="scene" id="character-scene" data-hairstyle="1">
+            
+            <!-- Background Layer -->
+            <div class="layer layer-bg">
+                <div class="grid-floor"></div>
+                <div class="bokeh-light b-cyan"></div>
+                <div class="bokeh-light b-pink"></div>
+                <div class="bokeh-light b-purple"></div>
+                <div class="neon-pillar-1"></div>
+                <div class="neon-pillar-2"></div>
+                <div class="cyber-sign">電脳都市</div>
+            </div>
+
+            <!-- Back Hair -->
+            <div class="layer layer-hair-back">
+                <div class="hair-back-shape"></div>
+            </div>
+
+            <!-- Head Base & Body -->
+            <div class="layer layer-head">
+                <div class="jacket">
+                    <div class="jacket-collar left"></div>
+                    <div class="jacket-collar right"></div>
+                </div>
+                <div class="neck">
+                    <div class="cyber-wire"></div>
+                </div>
+                <div class="ear left">
+                    <div class="ear-detail"></div>
+                    <div class="earring"></div>
+                    <div class="earring e2"></div>
+                </div>
+                <div class="ear right">
+                    <div class="ear-detail"></div>
+                    <div class="earring"></div>
+                </div>
+                <div class="face-base">
+                    <div class="contour left"></div>
+                    <div class="contour right"></div>
+                    <div class="chin-highlight"></div>
+                    <div class="face-tattoo"></div>
+                </div>
+            </div>
+
+            <!-- Features (Nose, Mouth) -->
+            <div class="layer layer-features">
+                <div class="nose">
+                    <div class="nostril left"></div>
+                    <div class="nostril right"></div>
+                </div>
+                <div class="lips">
+                    <div class="lip-top-left"></div>
+                    <div class="lip-top-right"></div>
+                    <div class="lip-bottom"></div>
+                    <div class="mouth-line"></div>
+                </div>
+            </div>
+
+            <!-- Dynamic Eyes Layer -->
+            <div class="layer layer-eyes">
+                <div class="eye-container" data-style="1">
+                    <div class="eye left">
+                        <div class="eyelid"></div>
+                        <div class="iris">
+                            <div class="pupil"></div>
+                            <div class="eye-reflection"></div>
+                        </div>
+                    </div>
+                    <div class="eye right">
+                        <div class="eyelid"></div>
+                        <div class="iris">
+                            <div class="pupil"></div>
+                            <div class="eye-reflection"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Glasses -->
+            <div class="layer layer-glasses">
+                <div class="glasses-container">
+                    <div class="lens left"></div>
+                    <div class="glasses-bridge"></div>
+                    <div class="lens right"></div>
+                </div>
+            </div>
+
+            <!-- Hair Mid Layer -->
+            <div class="layer layer-hair-mid">
+                <div class="spike s7"></div>
+                <div class="spike s13"></div>
+                <div class="spike s8"></div>
+            </div>
+
+            <!-- Front Hair Bangs -->
+            <div class="layer layer-hair-front">
+                <div class="spike s4"></div>
+                <div class="spike s1"></div>
+                <div class="spike s2"></div>
+                <div class="spike s3"></div>
+                <div class="spike s6"></div>
+                <div class="spike s5"></div>
+            </div>
+
+            <!-- Forefront Stray Hairs -->
+            <div class="layer layer-hair-forefront">
+                <div class="spike thin s11"></div>
+                <div class="spike thin s9"></div>
+                <div class="spike thin s10"></div>
+                <div class="spike thin s12"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Mobile UI Controls -->
+    <div class="controls-panel">
+        <div class="control-group">
+            <button id="btn-eye-prev">&lt;</button>
+            <span>EYES</span>
+            <button id="btn-eye-next">&gt;</button>
+        </div>
+        <div class="control-group">
+            <button id="btn-hair-prev">&lt;</button>
+            <span>HAIR</span>
+            <button id="btn-hair-next">&gt;</button>
+        </div>
+    </div>
+
+    <script>
+        const root = document.documentElement;
+        
+        let targetX = 0;
+        let targetY = 0;
+        let currentX = 0;
+        let currentY = 0;
+        
+        let currentHairStyle = 1;
+        const totalHairStyles = 10;
+
+        // Map internal 1-10 index to the CSS data attributes
+        let currentEyeIdx = 0; 
+        const eyeStylesMap = ['1','2','3','4','5','6','7','8','9','0'];
+
+        // --- UI Button Interactions ---
+        function updateEyeStyle(direction) {
+            currentEyeIdx = (currentEyeIdx + direction + 10) % 10;
+            document.querySelector('.eye-container').setAttribute('data-style', eyeStylesMap[currentEyeIdx]);
+        }
+
+        function updateHairStyle(direction) {
+            currentHairStyle += direction;
+            if (currentHairStyle > totalHairStyles) currentHairStyle = 1;
+            if (currentHairStyle < 1) currentHairStyle = totalHairStyles;
+            document.getElementById('character-scene').setAttribute('data-hairstyle', currentHairStyle);
+        }
+
+        // Attach listeners and prevent touch from passing through to swipe
+        const setupButton = (id, action, dir) => {
+            const btn = document.getElementById(id);
+            const handler = (e) => { e.preventDefault(); e.stopPropagation(); action(dir); };
+            btn.addEventListener('mousedown', handler);
+            btn.addEventListener('touchstart', handler, {passive: false});
+        };
+
+        setupButton('btn-eye-prev', updateEyeStyle, -1);
+        setupButton('btn-eye-next', updateEyeStyle, 1);
+        setupButton('btn-hair-prev', updateHairStyle, -1);
+        setupButton('btn-hair-next', updateHairStyle, 1);
+
+        // Prevent swiping from triggering on the control panel background
+        const controlsPanel = document.querySelector('.controls-panel');
+        controlsPanel.addEventListener('touchstart', e => e.stopPropagation(), {passive: false});
+        controlsPanel.addEventListener('touchmove', e => e.stopPropagation(), {passive: false});
+
+
+        // --- Relative Swipe / Drag Controls ---
+        let isDragging = false;
+        let lastPointerX = 0;
+        let lastPointerY = 0;
+
+        function handlePointerDown(e) {
+            if (e.target.closest('.controls-panel')) return;
+            isDragging = true;
+            const pointer = e.touches ? e.touches[0] : e;
+            lastPointerX = pointer.clientX;
+            lastPointerY = pointer.clientY;
+        }
+
+        function handlePointerMove(e) {
+            if (!isDragging) return;
+            e.preventDefault(); // Prevent native mobile scrolling
+            
+            const pointer = e.touches ? e.touches[0] : e;
+            const deltaX = pointer.clientX - lastPointerX;
+            const deltaY = pointer.clientY - lastPointerY;
+            
+            // Adjust sensitivity (lower number = requires longer swipe)
+            targetX += (deltaX / window.innerWidth) * 2.5;
+            targetY += (deltaY / window.innerHeight) * 2.5;
+
+            // Clamp rotation bounds
+            targetX = Math.max(-1.5, Math.min(1.5, targetX));
+            targetY = Math.max(-1, Math.min(1, targetY));
+
+            lastPointerX = pointer.clientX;
+            lastPointerY = pointer.clientY;
+        }
+
+        function handlePointerUp() {
+            isDragging = false;
+            // Snap back to center after swipe release
+            targetX = 0;
+            targetY = 0;
+        }
+
+        // Mouse Events
+        window.addEventListener('mousedown', handlePointerDown);
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+        window.addEventListener('mouseleave', handlePointerUp);
+
+        // Touch Events
+        window.addEventListener('touchstart', handlePointerDown, {passive: false});
+        window.addEventListener('touchmove', handlePointerMove, {passive: false});
+        window.addEventListener('touchend', handlePointerUp);
+
+        // --- Keyboard Controls (Fallback) ---
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') targetX = -1;
+            if (e.key === 'ArrowRight') targetX = 1;
+            if (e.key === 'ArrowUp') targetY = -1;
+            if (e.key === 'ArrowDown') targetY = 1;
+            
+            if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].includes(e.key)) {
+                document.querySelector('.eye-container').setAttribute('data-style', e.key);
+                currentEyeIdx = eyeStylesMap.indexOf(e.key);
+            }
+            
+            const key = e.key.toLowerCase();
+            if (key === 'z') updateHairStyle(-1);
+            if (key === 'x') updateHairStyle(1);
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' && targetX === -1) targetX = 0;
+            if (e.key === 'ArrowRight' && targetX === 1) targetX = 0;
+            if (e.key === 'ArrowUp' && targetY === -1) targetY = 0;
+            if (e.key === 'ArrowDown' && targetY === 1) targetY = 0;
+        });
+
+        // --- Animation Loop ---
+        function animate() {
+            // Linear interpolation for silky smooth rotation
+            currentX += (targetX - currentX) * 0.08;
+            currentY += (targetY - currentY) * 0.08;
+
+            root.style.setProperty('--lookX', currentX.toFixed(4));
+            root.style.setProperty('--lookY', currentY.toFixed(4));
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

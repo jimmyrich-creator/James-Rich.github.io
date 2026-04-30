@@ -90,12 +90,7 @@
 
         #grid-game-wrapper.pop-effect-1.is-popping .grid-item:not(.is-exploding) { transform: scale(1.08); filter: brightness(3) contrast(2); }
         #grid-game-wrapper.pop-effect-2.is-popping .grid-item:not(.is-exploding) { transform: scale(0.95) rotate(5deg); filter: invert(0.8); }
-        #grid-game-wrapper.pop-effect-3.is-popping .grid-item:not(.is-exploding) { transform: translateY(-10px); filter: blur(5px); opacity: 0.6; }
-        #grid-game-wrapper.pop-effect-4.is-popping .grid-item:not(.is-exploding) { transform: translateY(15px); filter: drop-shadow(0 0 15px #0ff) hue-rotate(180deg); }
-        #grid-game-wrapper.pop-effect-5.is-popping .grid-item:not(.is-exploding) { transform: rotate(-3deg); filter: sepia(1) saturate(3); }
-        #grid-game-wrapper.pop-effect-6.is-popping .grid-item:not(.is-exploding) { transform: skew(15deg, -10deg); filter: hue-rotate(90deg) contrast(2); }
         #grid-game-wrapper.pop-effect-7.is-popping .grid-item:not(.is-exploding) { transform: scale(1.12); filter: saturate(2.5); transition-timing-function: cubic-bezier(0.5, -0.5, 0.5, 1.5); }
-        #grid-game-wrapper.pop-effect-8.is-popping .grid-item:not(.is-exploding) { transform: scale(0.85); filter: grayscale(1) brightness(1.2); }
         #grid-game-wrapper.pop-effect-9.is-popping .grid-item:not(.is-exploding) { transform: scale(0.9); filter: contrast(4) saturate(4); }
 
         @media (min-width: 600px) {
@@ -123,8 +118,6 @@
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.5); } }
         .effect-5::view-transition-image-pair(*) { animation: wobble 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
         @keyframes wobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-20deg); } 75% { transform: rotate(20deg); } }
-        .effect-7::view-transition-image-pair(*) { animation: hueShift 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
-        @keyframes hueShift { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
         .effect-8::view-transition-image-pair(*) { animation: flipX 0.8s cubic-bezier(0.25, 1, 0.5, 1); perspective: 1000px; }
         @keyframes flipX { 0% { transform: rotateX(0deg); } 100% { transform: rotateX(360deg); } }
         .effect-9::view-transition-image-pair(*) { animation: shrinkSpin 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
@@ -724,25 +717,55 @@
         <!-- 3.5. AI PROJECTS PAGE -->
         <section id="aiprojects" class="page-section w-full py-12">
             <div class="mb-12">
-                <h2 class="text-3xl md:text-5xl font-bold mb-6 text-white">AI</h2>
-                <ul class="text-slate-400 text-lg space-y-4 list-none max-w-4xl">
-                    <li class="flex items-start gap-3">
-                        <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>Working with AI in games for 20 years, from in-game player-facing NPCs to test environment bots used for validating mechanics and performance.</span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>At Meta, utilized AI Agents to test social end-to-end flows.</span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>Avid prototyper using Gen AI across code, images, video, and music.</span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>Participant in Google Labs programs providing continuous UX feedback.</span>
-                    </li>
-                </ul>
+                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">AI</h2>
+                <p class="text-slate-400 text-lg mb-10 max-w-4xl leading-relaxed">Specializing in building <strong class="text-slate-200">Autonomous Agents</strong> and scalable <strong class="text-slate-200">Agentic Workflows</strong>, with a focus on <strong class="text-slate-200">Human-in-the-loop (HITL)</strong> evaluation to ensure quality, performance, and precision.</p>
+                
+                <div class="space-y-10 max-w-4xl">
+                    <!-- AI & Games -->
+                    <div>
+                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">AI & Games</h3>
+                        <ul class="text-slate-400 text-lg space-y-4 list-none">
+                            <li class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span><strong class="text-slate-200">Believable NPCs:</strong> 20 years of building game characters that think, react, and feel alive.</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span><strong class="text-slate-200">Automated Playtesting:</strong> Engineering bots that stress-test mechanics and validate performance.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Systems & Agents -->
+                    <div>
+                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">Systems & Agents</h3>
+                        <ul class="text-slate-400 text-lg space-y-4 list-none">
+                            <li class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span><strong class="text-slate-200">Agentic Testing:</strong> Using AI agents at Meta to verify complex social flows at scale.</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span><strong class="text-slate-200">UX Strategy:</strong> Partnering with Google Labs to road-test and refine next-gen AI tools.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Rapid Prototyping -->
+                    <div>
+                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">Rapid Prototyping</h3>
+                        <ul class="text-slate-400 text-lg space-y-4 list-none">
+                            <li class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span><strong class="text-slate-200">Multimodal Dev:</strong> Turning ideas into code, art, and music instantly via Gen AI.</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span><strong class="text-slate-200">Local Power:</strong> Running local "claws" and custom models for high-speed, private development.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
             <h3 class="text-2xl font-semibold text-white mb-8 mt-4 flex items-center gap-3">
@@ -1014,7 +1037,8 @@
             'logos/XBOX.webp'
         ];
 
-        const allowedEffects = [0, 1, 2, 3, 4, 5, 7, 8, 9]; 
+        const allowedEffects = [0, 1, 2, 3, 4, 5, 8, 9]; 
+        const allowedPopEffects = [0, 1, 2, 7, 9]; 
         let isGridAnimating = false;
 
         const grid = document.getElementById('grid-container');
@@ -1045,10 +1069,14 @@
 
             osc.start(audioCtx.currentTime);
             osc.stop(audioCtx.currentTime + 0.1);
+            osc.onended = () => {
+                gainNode.disconnect();
+                osc.disconnect();
+            };
         }
 
         if (grid) {
-            grid.addEventListener('pointerdown', (e) => {
+            grid.addEventListener('click', (e) => {
                 const item = e.target.closest('.grid-item');
                 if (!item) return; 
                 handleGridInteraction(e, item);
@@ -1080,14 +1108,14 @@
             if (navigator.vibrate) navigator.vibrate(40);
 
             const randomEffect = allowedEffects[Math.floor(Math.random() * allowedEffects.length)];
-            const randomPopEffect = Math.floor(Math.random() * 10);
+            const randomPopEffect = allowedPopEffects[Math.floor(Math.random() * allowedPopEffects.length)];
 
             // Clean previous effect classes on wrapper
             gridWrapper.className = gridWrapper.className.replace(/effect-\d+/g, '').replace(/pop-effect-\d+/g, '').trim();
             gridWrapper.classList.add(`effect-${randomEffect}`, `pop-effect-${randomPopEffect}`, 'is-popping');
 
-            // Set document element for view transitions
-            document.documentElement.classList.forEach(c => {
+            // Set document element for view transitions safely
+            Array.from(document.documentElement.classList).forEach(c => {
                 if (c.startsWith('effect-')) document.documentElement.classList.remove(c);
             });
             document.documentElement.classList.add(`effect-${randomEffect}`);
@@ -1123,7 +1151,11 @@
 
             if (document.startViewTransition) {
                 const transition = document.startViewTransition(() => updateDOM());
+                
+                const safetyTimeout = setTimeout(() => { isGridAnimating = false; }, 1500);
+                
                 transition.finished.finally(() => {
+                    clearTimeout(safetyTimeout);
                     isGridAnimating = false;
                 });
             } else {

@@ -323,17 +323,21 @@
         [data-glasses="1"] .lens.right { border-radius: 100% 0 100% 0; transform: rotate(18deg); }
 
         /* 2: Daft Punk Mono-Visor */
+        [data-glasses="2"] { --glasses-glow: #ff0055; --glasses-fill: rgba(255, 0, 85, 0.25); filter: drop-shadow(0 15px 15px rgba(255, 0, 85, 0.15)); }
         [data-glasses="2"] .lens { width: 240px; height: 60px; border-radius: 15px; transform: none; }
         [data-glasses="2"] .lens.left { position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; }
         [data-glasses="2"] .lens.right, [data-glasses="2"] .glasses-bridge { opacity: 0; }
 
         /* 3: Lennon Rounds */
+        [data-glasses="3"] { --glasses-glow: #ffff00; --glasses-fill: rgba(255, 255, 0, 0.25); filter: drop-shadow(0 15px 15px rgba(255, 255, 0, 0.15)); }
         [data-glasses="3"] .lens { width: 70px; height: 70px; border-radius: 50%; transform: none; }
 
         /* 4: Kamina Sharp Triangles */
+        [data-glasses="4"] { --glasses-glow: #ff0000; --glasses-fill: rgba(255, 0, 0, 0.25); filter: drop-shadow(0 15px 15px rgba(255, 0, 0, 0.15)); }
         [data-glasses="4"] .lens { border-radius: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); height: 90px; transform: none; }
 
         /* 5: Retro Aviators */
+        [data-glasses="5"] { --glasses-glow: #00aaff; --glasses-fill: rgba(0, 170, 255, 0.25); filter: drop-shadow(0 15px 15px rgba(0, 170, 255, 0.15)); }
         [data-glasses="5"] .lens { width: 90px; height: 90px; border-radius: 30% 30% 50% 50% / 20% 20% 80% 80%; transform: none; }
         [data-glasses="5"] .glasses-bridge { top: 20px; }
 
@@ -342,6 +346,7 @@
         [data-glasses="6"] .glasses-bridge { top: 30px; background: #444; box-shadow: none; height: 3px; }
 
         /* 7: Cyber-Diamond */
+        [data-glasses="7"] { --glasses-glow: #aa00ff; --glasses-fill: rgba(170, 0, 255, 0.25); filter: drop-shadow(0 15px 15px rgba(170, 0, 255, 0.15)); }
         [data-glasses="7"] .lens { border-radius: 0; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); transform: none; height: 90px; }
 
         /* 8: No Glasses (Hidden) */
@@ -352,6 +357,7 @@
         [data-glasses="9"] .glasses-bridge { background: #111; height: 8px; box-shadow: none; }
 
         /* 10: Hexagonal Hive */
+        [data-glasses="10"] { --glasses-glow: #ffaa00; --glasses-fill: rgba(255, 170, 0, 0.25); filter: drop-shadow(0 15px 15px rgba(255, 170, 0, 0.15)); }
         [data-glasses="10"] .lens { border-radius: 0; clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); transform: none; }
 
         /* 11: Steampunk Cyber-Goggles */
@@ -363,9 +369,11 @@
         [data-glasses="12"] .lens.right { border-radius: 0; transform: none; }
 
         /* 13: Dumbledore Half-Moons */
+        [data-glasses="13"] { --glasses-glow: #00ffff; --glasses-fill: rgba(0, 255, 255, 0.25); filter: drop-shadow(0 15px 15px rgba(0, 255, 255, 0.15)); }
         [data-glasses="13"] .lens { border-radius: 0 0 50px 50px; height: 45px; transform: none; top: 15px; }
 
         /* 14: Shutter Shades */
+        [data-glasses="14"] { --glasses-glow: #ff00aa; filter: drop-shadow(0 15px 15px rgba(255, 0, 170, 0.15)); }
         [data-glasses="14"] .lens { border-radius: 5px; transform: none; background: repeating-linear-gradient(to bottom, var(--glasses-glow) 0, var(--glasses-glow) 8px, transparent 8px, transparent 16px); border: none; box-shadow: none; }
         [data-glasses="14"] .glasses-bridge { background: var(--glasses-glow); }
 

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interactive Claymation Sphere</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0f0f11;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            touch-action: none;
+            /* Prevent browser handling of gestures like pinch zoom and scrolling */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: grab;
+            background: radial-gradient(circle at center, #1a1a24 0%, #000000 100%);
+        }
+
+        #video-container:active {
+            cursor: grabbing;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            /* Let container handle events */
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            color: white;
+            z-index: 10;
+            transition: opacity 0.6s ease;
+        }
+
+        .swipe-animation {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .hand-icon {
+            font-size: 40px;
+            animation: swipeAnim 2s infinite ease-in-out;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+        }
+
+        .arrows {
+            position: absolute;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes swipeAnim {
+            0% {
+                transform: translateX(15px) rotate(5deg);
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            80% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateX(-15px) rotate(-5deg);
+                opacity: 0;
+            }
+        }
+
+        h2 {
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 16px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            margin: 0;
+        }
+
+        #loading {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            letter-spacing: 1px;
+            z-index: 20;
+            transition: opacity 0.5s ease;
+            text-transform: uppercase;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #progress-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background: white;
+            transition: width 0.1s;
+        }
+
+        .hidden {
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loading">
+        <div>Loading High-Res Textures...</div>
+        <div id="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+    </div>
+
+    <div id="video-container">
+        <canvas id="sphere-canvas"></canvas>
+
+        <div id="overlay">
+            <div class="swipe-animation">
+                <div class="arrows">
+                    <span>&#8592;</span>
+                    <span>&#8594;</span>
+                </div>
+                <div class="hand-icon">&#128070;</div>
+            </div>
+            <h2>Swipe to interact</h2>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('sphere-canvas');
+            const ctx = canvas.getContext('2d');
+            const container = document.getElementById('video-container');
+            const overlay = document.getElementById('overlay');
+            const loading = document.getElementById('loading');
+            const progressFill = document.getElementById('progress-fill');
+
+            const totalFrames = 334;
+            const images = [];
+            let imagesLoaded = 0;
+
+            let isDragging = false;
+            let startX = 0;
+            let startFrame = 0;
+            let targetFrame = 0;
+            let currentLerpFrame = 0;
+            let velocity = 0;
+            let animationFrameId = null;
+
+            // Sensitivity: Lower number = faster spin relative to finger swipe
+            const sensitivity = 1.0;
+
+            // Preload images into memory
+            for (let i = 0; i < totalFrames; i++) {
+                const img = new Image();
+                const frameNumber = i.toString().padStart(4, '0');
+                img.src = `frames/frame_${frameNumber}.webp`;
+
+                img.onload = () => {
+                    imagesLoaded++;
+                    progressFill.style.width = `${(imagesLoaded / totalFrames) * 100}%`;
+
+                    // When all frames are ready, initialize the canvas
+                    if (imagesLoaded === totalFrames) {
+                        initCanvas();
+                    }
+                };
+                img.onerror = () => {
+                    console.error('Failed to load frame', i);
+                    // Still increment to not block forever
+                    imagesLoaded++;
+                    if (imagesLoaded === totalFrames) {
+                        initCanvas();
+                    }
+                }
+                images.push(img);
+            }
+
+            function initCanvas() {
+                // Fade out the loading bar
+                loading.classList.add('hidden');
+
+                // Set the canvas size exactly to the first loaded image's natural dimensions
+                if (images[0].naturalWidth > 0) {
+                    canvas.width = images[0].naturalWidth;
+                    canvas.height = images[0].naturalHeight;
+                } else {
+                    canvas.width = 1920;
+                    canvas.height = 1080;
+                }
+
+                // Initial draw to show the first frame
+                drawFrame(0);
+
+                // Start animation loop for lerping
+                if (!animationFrameId) {
+                    updateFrame();
+                }
+            }
+
+            function drawFrame(index) {
+                // Wrap the index gracefully
+                let safeIndex = ((Math.floor(index) % totalFrames) + totalFrames) % totalFrames;
+
+                if (images[safeIndex] && images[safeIndex].complete && images[safeIndex].naturalWidth > 0) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    // Drawing the pre-loaded image is basically instantaneous
+                    ctx.drawImage(images[safeIndex], 0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            container.addEventListener('pointerdown', (e) => {
+                if (imagesLoaded < totalFrames) return;
+
+                isDragging = true;
+                startX = e.clientX;
+                startFrame = currentLerpFrame;
+                velocity = 0; // stop any existing spin when grabbed
+
+                if (!overlay.classList.contains('hidden')) {
+                    overlay.classList.add('hidden');
+                }
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!isDragging || imagesLoaded < totalFrames) return;
+
+                const deltaX = e.clientX - startX;
+
+                // Calculate frame delta based on pixels dragged. 
+                // Negative deltaX (swipe left) -> positive frame delta (spin forward)
+                const pixelsPerFullSpin = window.innerWidth * sensitivity;
+                const frameDelta = -(deltaX / pixelsPerFullSpin) * totalFrames;
+
+                targetFrame = startFrame + frameDelta;
+            });
+
+            window.addEventListener('pointerup', () => {
+                isDragging = false;
+            });
+
+            window.addEventListener('pointercancel', () => {
+                isDragging = false;
+            });
+
+            // The main render loop for buttery smooth scrubbing and inertia
+            let lastDrawnIndex = -1;
+
+            function updateFrame() {
+                const lerpFactor = 0.25;
+
+                if (isDragging) {
+                    // While dragging, velocity is the distance we lerped this frame.
+                    // This naturally tracks how fast the user is pulling the sphere.
+                    const moveDelta = (targetFrame - currentLerpFrame) * lerpFactor;
+                    currentLerpFrame += moveDelta;
+                    velocity = moveDelta;
+                } else {
+                    // While not dragging, apply friction to the velocity for inertia
+                    // Friction: closer to 1 = spins longer, lower = stops faster
+                    velocity *= 0.95;
+                    currentLerpFrame += velocity;
+
+                    // Sync targetFrame so if they tap again, it doesn't jump
+                    targetFrame = currentLerpFrame;
+                }
+
+                // Only draw if the actual frame number changes to save CPU/GPU cycles
+                let safeIndex = ((Math.floor(currentLerpFrame) % totalFrames) + totalFrames) % totalFrames;
+
+                if (safeIndex !== lastDrawnIndex) {
+                    drawFrame(safeIndex);
+                    lastDrawnIndex = safeIndex;
+                }
+
+                animationFrameId = requestAnimationFrame(updateFrame);
+            }
+        });
+    </script>
+</body>
+
+</html>

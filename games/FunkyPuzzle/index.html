@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Funky Puzzle – Geometric Challenge</title>
+    <meta name="description" content="Solve the multi-level geometric puzzle with dynamic tessellation!">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <div class="start-content">
+            <h1 class="title-glow">FUNKY PUZZLE</h1>
+            <p class="subtitle">Drag &amp; drop all 8 pieces into the outline</p>
+            <button id="play-btn" class="btn-glow">PLAY</button>
+        </div>
+        <canvas id="bg-particles"></canvas>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+        <div id="timer">00:00</div>
+        <div id="piece-count">0 / 8</div>
+        <button id="reset-btn" class="hud-btn" title="Reset pieces">⟲</button>
+    </div>
+
+    <!-- Win Screen -->
+    <div id="win-screen" class="hidden">
+        <div class="win-content">
+            <h1 class="title-glow">COMPLETE!</h1>
+            <p id="win-time" class="subtitle"></p>
+            <button id="replay-btn" class="btn-glow">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

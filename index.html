@@ -43,37 +43,37 @@
             justify-content: center;
             align-items: center;
             padding: 8px 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255,255,255,0.8);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.8);
             cursor: pointer;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
-            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
-                        box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                        opacity 0.2s ease,
-                        filter 0.2s ease; 
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease,
+                filter 0.2s ease;
         }
 
         @media (hover: hover) {
             .grid-item:hover {
                 transform: scale(1.06) translateY(-4px);
-                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), inset 0 2px 0 rgba(255,255,255,0.9);
+                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.9);
             }
         }
 
         .grid-item:active {
             transform: scale(0.92) translateY(2px);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.5);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.5);
             transition: transform 0.05s ease, box-shadow 0.05s ease;
         }
 
         .grid-item img {
             width: auto;
             height: auto;
-            max-height: 50px; 
+            max-height: 50px;
             max-width: 100%;
             object-fit: contain;
             pointer-events: none;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
 
         .grid-item.is-exploding {
@@ -88,40 +88,172 @@
             will-change: transform, filter;
         }
 
-        #grid-game-wrapper.pop-effect-1.is-popping .grid-item:not(.is-exploding) { transform: scale(1.08); filter: brightness(3) contrast(2); }
-        #grid-game-wrapper.pop-effect-2.is-popping .grid-item:not(.is-exploding) { transform: scale(0.95) rotate(5deg); filter: invert(0.8); }
-        #grid-game-wrapper.pop-effect-7.is-popping .grid-item:not(.is-exploding) { transform: scale(1.12); filter: saturate(2.5); transition-timing-function: cubic-bezier(0.5, -0.5, 0.5, 1.5); }
-        #grid-game-wrapper.pop-effect-9.is-popping .grid-item:not(.is-exploding) { transform: scale(0.9); filter: contrast(4) saturate(4); }
+        #grid-game-wrapper.pop-effect-1.is-popping .grid-item:not(.is-exploding) {
+            transform: scale(1.08);
+            filter: brightness(3) contrast(2);
+        }
+
+        #grid-game-wrapper.pop-effect-2.is-popping .grid-item:not(.is-exploding) {
+            transform: scale(0.95) rotate(5deg);
+            filter: invert(0.8);
+        }
+
+        #grid-game-wrapper.pop-effect-7.is-popping .grid-item:not(.is-exploding) {
+            transform: scale(1.12);
+            filter: saturate(2.5);
+            transition-timing-function: cubic-bezier(0.5, -0.5, 0.5, 1.5);
+        }
+
+        #grid-game-wrapper.pop-effect-9.is-popping .grid-item:not(.is-exploding) {
+            transform: scale(0.9);
+            filter: contrast(4) saturate(4);
+        }
 
         @media (min-width: 600px) {
-            #grid-container { gap: 20px; }
-            .grid-item { padding: 10px 15px; }
-            .grid-item img { max-height: 80px; }
+            #grid-container {
+                gap: 20px;
+            }
+
+            .grid-item {
+                padding: 10px 15px;
+            }
+
+            .grid-item img {
+                max-height: 80px;
+            }
         }
+
         @media (min-width: 900px) {
-            #grid-container { gap: 24px; }
-            .grid-item { padding: 12px 18px; border-radius: 24px; }
-            .grid-item img { max-height: 110px; }
+            #grid-container {
+                gap: 24px;
+            }
+
+            .grid-item {
+                padding: 12px 18px;
+                border-radius: 24px;
+            }
+
+            .grid-item img {
+                max-height: 110px;
+            }
         }
 
         ::view-transition-group(*) {
             animation-duration: 0.8s;
             animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
         }
-        .effect-1::view-transition-image-pair(*) { animation: spin 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .effect-2::view-transition-image-pair(*) { animation: flipY 0.8s cubic-bezier(0.25, 1, 0.5, 1); perspective: 1000px; }
-        @keyframes flipY { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
-        .effect-3::view-transition-image-pair(*) { animation: squeeze 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
-        @keyframes squeeze { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(0.4, 1.4); } }
-        .effect-4::view-transition-image-pair(*) { animation: pulse 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.5); } }
-        .effect-5::view-transition-image-pair(*) { animation: wobble 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
-        @keyframes wobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-20deg); } 75% { transform: rotate(20deg); } }
-        .effect-8::view-transition-image-pair(*) { animation: flipX 0.8s cubic-bezier(0.25, 1, 0.5, 1); perspective: 1000px; }
-        @keyframes flipX { 0% { transform: rotateX(0deg); } 100% { transform: rotateX(360deg); } }
-        .effect-9::view-transition-image-pair(*) { animation: shrinkSpin 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
-        @keyframes shrinkSpin { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(0.3) rotate(180deg); } }
+
+        .effect-1::view-transition-image-pair(*) {
+            animation: spin 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .effect-2::view-transition-image-pair(*) {
+            animation: flipY 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            perspective: 1000px;
+        }
+
+        @keyframes flipY {
+            0% {
+                transform: rotateY(0deg);
+            }
+
+            100% {
+                transform: rotateY(360deg);
+            }
+        }
+
+        .effect-3::view-transition-image-pair(*) {
+            animation: squeeze 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes squeeze {
+
+            0%,
+            100% {
+                transform: scale(1, 1);
+            }
+
+            50% {
+                transform: scale(0.4, 1.4);
+            }
+        }
+
+        .effect-4::view-transition-image-pair(*) {
+            animation: pulse 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(0.5);
+            }
+        }
+
+        .effect-5::view-transition-image-pair(*) {
+            animation: wobble 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes wobble {
+
+            0%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            25% {
+                transform: rotate(-20deg);
+            }
+
+            75% {
+                transform: rotate(20deg);
+            }
+        }
+
+        .effect-8::view-transition-image-pair(*) {
+            animation: flipX 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            perspective: 1000px;
+        }
+
+        @keyframes flipX {
+            0% {
+                transform: rotateX(0deg);
+            }
+
+            100% {
+                transform: rotateX(360deg);
+            }
+        }
+
+        .effect-9::view-transition-image-pair(*) {
+            animation: shrinkSpin 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes shrinkSpin {
+
+            0%,
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            50% {
+                transform: scale(0.3) rotate(180deg);
+            }
+        }
     </style>
 </head>
 
@@ -141,7 +273,8 @@
                     class="text-slate-400 hover:text-white transition-colors">Skills</button>
                 <button onclick="navigateTo('projects')"
                     class="text-slate-400 hover:text-white transition-colors">Projects</button>
-                <button onclick="navigateTo('aiprojects')" class="text-slate-400 hover:text-white transition-colors">AI</button>
+                <button onclick="navigateTo('aiprojects')"
+                    class="text-slate-400 hover:text-white transition-colors">AI</button>
                 <button onclick="navigateTo('contact')"
                     class="text-slate-400 hover:text-white transition-colors">Contact</button>
             </div>
@@ -209,7 +342,8 @@
 
             <!-- Interactive Grid Game Logos -->
             <div id="grid-game-wrapper" class="mt-4 mb-4 max-w-5xl mx-auto px-4 effect-0 pop-effect-0">
-                <p class="text-slate-400 text-sm font-semibold tracking-widest uppercase mb-6">Teams I've Collaborated With (Interactive)</p>
+                <p class="text-slate-400 text-sm font-semibold tracking-widest uppercase mb-6">Who I Work With
+                </p>
                 <div id="grid-container"></div>
             </div>
 
@@ -424,7 +558,8 @@
                                     class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                                        </path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     </svg>
@@ -541,8 +676,8 @@
         <section id="projects" class="page-section w-full py-12">
             <div class="mb-12">
                 <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">Professional Experience</h2>
-                <p class="text-slate-400 text-lg">A selection of major titles and platforms I have contributed to
-                    throughout my career.</p>
+                <p class="text-slate-400 text-lg">A selection of major titles I am proud to have helped develop and
+                    launch so far.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -555,8 +690,9 @@
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
-                        <h3 class="text-2xl font-bold text-white mb-1">Battlefield</h3>
-                        <p class="text-blue-400 font-medium text-sm mb-3">Electronic Arts</p>
+                        <h3 class="text-2xl font-bold text-white mb-1">Battlefield 2042, Battlefield V</h3>
+                        <p class="text-blue-400 font-medium text-sm mb-3">Electronic Arts , DICE, Ripple Effect , EA
+                            Vancouver </p>
                         <p class="text-slate-400 text-sm leading-relaxed">Quality Designer . Ensured top-tier quality
                             and balanced design across complex, high-fidelity multiplayer warfare environments.</p>
                     </div>
@@ -586,7 +722,7 @@
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
-                        <h3 class="text-2xl font-bold text-white mb-1">Need For Speed</h3>
+                        <h3 class="text-2xl font-bold text-white mb-1">Need For Speed: Unbound, The Run, Shift</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">EA Criterion</p>
                         <p class="text-slate-400 text-sm leading-relaxed">Analyst and QA Lead. Analyzed dynamic
                             open-world racing sequences and high-speed physics, ensuring thrilling player experiences
@@ -602,7 +738,7 @@
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
-                        <h3 class="text-2xl font-bold text-white mb-1">Star Wars Battlefront</h3>
+                        <h3 class="text-2xl font-bold text-white mb-1">Star Wars Battlefront 1 & 2 </h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">EA DICE</p>
                         <p class="text-slate-400 text-sm leading-relaxed">QA Lead and Game Designer. Drove quality
                             standards for large-scale galactic combat systems and shaped cutting-edge multiplayer
@@ -618,7 +754,7 @@
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
-                        <h3 class="text-2xl font-bold text-white mb-1">Forza Horizon</h3>
+                        <h3 class="text-2xl font-bold text-white mb-1">Forza Horizon 1 & 2 </h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">Microsoft Playground Games</p>
                         <p class="text-slate-400 text-sm leading-relaxed">Analyst and QA Lead. Evaluated vehicle
                             handling models and open-world systems, providing crucial data and quality testing to craft
@@ -634,7 +770,8 @@
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-6">
-                        <h3 class="text-2xl font-bold text-white mb-1">Harry Potter</h3>
+                        <h3 class="text-2xl font-bold text-white mb-1">Harry Potter: Goblet of Fire, Order of the
+                            Phoenix, Half Blood Prince</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">EA Bright Light</p>
                         <p class="text-slate-400 text-sm leading-relaxed">Game Designer and QA Analyst. Designed and
                             rigorously tested interactive magical experiences, refining gameplay mechanics for this
@@ -653,8 +790,9 @@
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">PopJam, Moshi Monsters</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">Mind Candy</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">QA Lead and Analyst. Oversaw quality assurance
-                            for engaging mini-games and secure social features, analyzing user data to optimize this
+                        <p class="text-slate-400 text-sm leading-relaxed">QA Engineer and content creator. Took a new
+                            creation focused social media platform from pre-Alpha to launch, gaining over 1 million
+                            downloads
                             popular children's platform.</p>
                     </div>
                 </div>
@@ -669,8 +807,8 @@
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Burnout Paradise</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">EA Criterion</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">QA Lead and Designer. Spearheaded testing for
-                            high-speed collision physics and collaborated on dynamic open-world racing mechanics.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Embedded QA, spearheading testing for open
+                            world features, collision physics and multiplayer mechanics for this cult classic .</p>
                     </div>
                 </div>
 
@@ -684,9 +822,11 @@
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">'Film Genre' 6 part Documentary Series</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">CreaTVtY Television FilmFour</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Assistant Producer. Coordinated production
-                            efforts, exploring cinematic techniques and genres to deliver emotionally impactful video
-                            projects.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed">Assistant Producer. Coordinated production and
+                            post production
+                            on 6 part documentary series exploring the evolution of film genre. Interviewing directors,
+                            writers, and producers to create a comprehensive look at the history of film.
+                        </p>
                     </div>
                 </div>
 
@@ -700,8 +840,9 @@
                     <div class="p-6">
                         <h3 class="text-2xl font-bold text-white mb-1">Music Behind the Scene</h3>
                         <p class="text-blue-400 font-medium text-sm mb-3">Film &amp; Audio Production</p>
-                        <p class="text-slate-400 text-sm leading-relaxed">Assistant Producer. Managed the production of
-                            immersive musical scores and audio tracks, working closely with audio teams to elevate
+                        <p class="text-slate-400 text-sm leading-relaxed">Assistant Producer. Licensed musical master
+                            and publishig rights for musical scores and audio tracks from major music labels and artists
+                            from Bowie to Hans Zimmer.
                             cinematic narratives.</p>
                     </div>
                 </div>
@@ -718,50 +859,87 @@
         <section id="aiprojects" class="page-section w-full py-12">
             <div class="mb-12">
                 <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">AI</h2>
-                <p class="text-slate-400 text-lg mb-10 max-w-4xl leading-relaxed">Specializing in building <strong class="text-slate-200">Autonomous Agents</strong> and scalable <strong class="text-slate-200">Agentic Workflows</strong>, with a focus on <strong class="text-slate-200">Human-in-the-loop (HITL)</strong> evaluation to ensure quality, performance, and precision.</p>
-                
+                <p class="text-slate-400 text-lg mb-10 max-w-4xl leading-relaxed">Specializing in building <strong
+                        class="text-slate-200">Autonomous Agents</strong> and scalable <strong
+                        class="text-slate-200">Agentic Workflows</strong>, with a focus on <strong
+                        class="text-slate-200">Human-in-the-loop (HITL)</strong> evaluation to ensure quality,
+                    performance, and precision.</p>
+
                 <div class="space-y-10 max-w-4xl">
                     <!-- AI & Games -->
                     <div>
-                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">AI & Games</h3>
+                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">AI & Games
+                        </h3>
                         <ul class="text-slate-400 text-lg space-y-4 list-none">
                             <li class="flex items-start gap-3">
-                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span><strong class="text-slate-200">Believable NPCs:</strong> 20 years of building game characters that think, react, and feel alive.</span>
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span><strong class="text-slate-200">Believable NPCs:</strong> 20 years of building game
+                                    characters that think, react, and feel alive.</span>
                             </li>
                             <li class="flex items-start gap-3">
-                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span><strong class="text-slate-200">Automated Playtesting:</strong> Engineering bots that stress-test mechanics and validate performance.</span>
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span><strong class="text-slate-200">Automated Playtesting:</strong> Engineering bots
+                                    that stress-test mechanics and validate performance.</span>
                             </li>
                         </ul>
                     </div>
 
                     <!-- Systems & Agents -->
                     <div>
-                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">Systems & Agents</h3>
+                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">Systems &
+                            Agents</h3>
                         <ul class="text-slate-400 text-lg space-y-4 list-none">
                             <li class="flex items-start gap-3">
-                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span><strong class="text-slate-200">Agentic Testing:</strong> Using AI agents at Meta to verify complex social flows at scale.</span>
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span><strong class="text-slate-200">Agentic Testing:</strong> Using AI agents at Meta
+                                    to verify complex social flows at scale.</span>
                             </li>
                             <li class="flex items-start gap-3">
-                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span><strong class="text-slate-200">UX Strategy:</strong> Partnering with Google Labs to road-test and refine next-gen AI tools.</span>
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span><strong class="text-slate-200">UX Strategy:</strong> Partnering with Google Labs
+                                    to road-test and refine next-gen AI tools.</span>
                             </li>
                         </ul>
                     </div>
 
                     <!-- Rapid Prototyping -->
                     <div>
-                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">Rapid Prototyping</h3>
+                        <h3 class="text-xl font-bold text-emerald-400 mb-4 border-b border-slate-700/50 pb-2">Rapid
+                            Prototyping</h3>
                         <ul class="text-slate-400 text-lg space-y-4 list-none">
                             <li class="flex items-start gap-3">
-                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span><strong class="text-slate-200">Multimodal Dev:</strong> Turning ideas into code, art, and music instantly via Gen AI.</span>
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span><strong class="text-slate-200">Multimodal Dev:</strong> Turning ideas into code,
+                                    art, and music instantly via Gen AI.</span>
                             </li>
                             <li class="flex items-start gap-3">
-                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span><strong class="text-slate-200">Local Power:</strong> Running local "claws" and custom models for high-speed, private development.</span>
+                                <svg class="w-6 h-6 text-emerald-500 mt-1 shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span><strong class="text-slate-200">Local Power:</strong> Running local "claws" and
+                                    custom models for high-speed, private development.</span>
                             </li>
                         </ul>
                     </div>
@@ -770,7 +948,9 @@
 
             <h3 class="text-2xl font-semibold text-white mb-8 mt-4 flex items-center gap-3">
                 <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                    </path>
                 </svg>
                 Prototypes
             </h3>
@@ -779,18 +959,21 @@
                 <!-- AI Project 1: Character Creation -->
                 <a href="games/Cyberpunk Character Switcher.html"
                     class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-emerald-500 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-900/20 cursor-pointer">
-                    <div class="aspect-video bg-slate-700/50 flex items-center justify-center overflow-hidden border-b border-slate-700">
+                    <div
+                        class="aspect-video bg-slate-700/50 flex items-center justify-center overflow-hidden border-b border-slate-700">
                         <img src="images/banners/character_creation.png" alt="Character Creation"
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-8 text-center flex flex-col items-center justify-center">
                         <h3 class="text-2xl font-bold text-white mb-3">Character Creation</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed mb-6">An interactive prototype demonstrating AI character switching and visual design customization.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-6">An interactive prototype demonstrating AI
+                            character switching and visual design customization.</p>
                         <span
                             class="inline-flex items-center gap-1 text-emerald-400 text-sm font-semibold group-hover:text-emerald-300">
                             Try Prototype <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                </path>
                             </svg>
                         </span>
                     </div>
@@ -799,18 +982,21 @@
                 <!-- AI Project 2: Claymation Experiment -->
                 <a href="games/Manosphere/index.html"
                     class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-amber-500 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-900/20 cursor-pointer">
-                    <div class="aspect-video bg-slate-700/50 flex items-center justify-center overflow-hidden border-b border-slate-700">
+                    <div
+                        class="aspect-video bg-slate-700/50 flex items-center justify-center overflow-hidden border-b border-slate-700">
                         <img src="images/banners/claymation.png" alt="Claymation Experiment"
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-8 text-center flex flex-col items-center justify-center">
                         <h3 class="text-2xl font-bold text-white mb-3">Claymation Experiment</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed mb-6">An interactive claymation sphere scrubber — swipe to rotate a hand-crafted clay model in real time.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-6">An interactive claymation sphere scrubber
+                            — swipe to rotate a hand-crafted clay model in real time.</p>
                         <span
                             class="inline-flex items-center gap-1 text-amber-400 text-sm font-semibold group-hover:text-amber-300">
                             Try Prototype <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                </path>
                             </svg>
                         </span>
                     </div>
@@ -819,18 +1005,21 @@
                 <!-- AI Project 3: There Will Be Cat Consequences -->
                 <a href="games/TWBCC.html"
                     class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-blue-500 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/20 cursor-pointer">
-                    <div class="aspect-video bg-slate-700/50 flex items-center justify-center overflow-hidden border-b border-slate-700">
+                    <div
+                        class="aspect-video bg-slate-700/50 flex items-center justify-center overflow-hidden border-b border-slate-700">
                         <img src="images/banners/cat_consequences.png" alt="There Will Be Cat Consequences"
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-8 text-center flex flex-col items-center justify-center">
                         <h3 class="text-2xl font-bold text-white mb-3">There Will Be Cat Consequences</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed mb-6">Retro style arcade platformer featuring shape shifting cats. Click to launch and play the game directly in your browser.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-6">Retro style arcade platformer featuring
+                            shape shifting cats. Click to launch and play the game directly in your browser.</p>
                         <span
                             class="inline-flex items-center gap-1 text-blue-400 text-sm font-semibold group-hover:text-blue-300">
                             Play Now <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                </path>
                             </svg>
                         </span>
                     </div>
@@ -839,18 +1028,22 @@
                 <!-- AI Project 4: Funky Puzzle -->
                 <a href="games/FunkyPuzzle/index.html"
                     class="group block rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden hover:border-purple-500 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-900/20 cursor-pointer">
-                    <div class="aspect-video bg-slate-700/50 flex items-center justify-center overflow-hidden border-b border-slate-700">
+                    <div
+                        class="aspect-video bg-slate-700/50 flex items-center justify-center overflow-hidden border-b border-slate-700">
                         <img src="images/banners/funky_puzzle.png" alt="Funky Puzzle"
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     <div class="p-8 text-center flex flex-col items-center justify-center">
                         <h3 class="text-2xl font-bold text-white mb-3">Funky Puzzle</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed mb-6">A multi-level geometric puzzle experience with dynamic tessellation. Solve increasingly complex challenges with custom image assets.</p>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-6">A multi-level geometric puzzle experience
+                            with dynamic tessellation. Solve increasingly complex challenges with custom image assets.
+                        </p>
                         <span
                             class="inline-flex items-center gap-1 text-purple-400 text-sm font-semibold group-hover:text-purple-300">
                             Play Now <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                </path>
                             </svg>
                         </span>
                     </div>
@@ -1052,8 +1245,8 @@
             'logos/XBOX.webp'
         ];
 
-        const allowedEffects = [0, 1, 2, 3, 4, 5, 8, 9]; 
-        const allowedPopEffects = [0, 1, 2, 7, 9]; 
+        const allowedEffects = [0, 1, 2, 3, 4, 5, 8, 9];
+        const allowedPopEffects = [0, 1, 2, 7, 9];
         let isGridAnimating = false;
 
         const grid = document.getElementById('grid-container');
@@ -1075,11 +1268,11 @@
             osc.type = 'sine';
 
             const baseFreq = 400 + Math.random() * 150;
-            
+
             osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
 
-            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime); 
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
 
             osc.start(audioCtx.currentTime);
@@ -1093,7 +1286,7 @@
         if (grid) {
             grid.addEventListener('click', (e) => {
                 const item = e.target.closest('.grid-item');
-                if (!item) return; 
+                if (!item) return;
                 handleGridInteraction(e, item);
             });
 
@@ -1101,15 +1294,15 @@
                 const item = document.createElement('div');
                 item.className = 'grid-item';
                 item.style.viewTransitionName = `logo-${index}`;
-                
+
                 const img = document.createElement('img');
                 img.src = src;
                 img.loading = 'lazy';
                 img.decoding = 'async';
-                img.alt = `Logo ${index + 1}`; 
+                img.alt = `Logo ${index + 1}`;
 
                 img.onerror = () => { img.style.display = 'none'; item.innerText = 'Logo'; };
-                
+
                 item.appendChild(img);
                 grid.appendChild(item);
             });
@@ -1140,13 +1333,13 @@
             setTimeout(() => {
                 gridWrapper.classList.remove('is-popping');
                 moveItemToRandomPosition(item);
-            }, 250); 
+            }, 250);
         }
 
         function moveItemToRandomPosition(item) {
             const items = Array.from(grid.children);
             const currentIndex = items.indexOf(item);
-            
+
             let newIndex = Math.floor(Math.random() * items.length);
             if (newIndex === currentIndex) {
                 newIndex = (currentIndex + 1) % items.length;
@@ -1156,7 +1349,7 @@
 
             const updateDOM = () => {
                 item.classList.remove('is-exploding');
-                
+
                 if (newIndex >= items.length - 1) {
                     grid.appendChild(item);
                 } else {
@@ -1166,9 +1359,9 @@
 
             if (document.startViewTransition) {
                 const transition = document.startViewTransition(() => updateDOM());
-                
+
                 const safetyTimeout = setTimeout(() => { isGridAnimating = false; }, 1500);
-                
+
                 transition.finished.finally(() => {
                     clearTimeout(safetyTimeout);
                     isGridAnimating = false;

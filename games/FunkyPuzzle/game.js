@@ -5,7 +5,8 @@ const SNAP_DIST = 28;
 const SNAP_ANGLE = 0.20;
 const SNAP_HOLD_TIME = 1000;
 const DRAG_ROTATE_SPEED = 0.03;
-const IMAGE_SRC = 'puzzle.jpg';
+const LEVELS = ['puzzle.jpg', 'level2.png', 'level3.png', 'level4.png'];
+let currentLevel = 0;
 
 const SHAPE_DEFS = [
   [[.40, .22], [.68, .25], [.82, .48], [.65, .78]],
@@ -123,13 +124,22 @@ function playThud() {
 img = new Image();
 img.onload = () => {
   rawW = img.width; rawH = img.height;
-  document.getElementById('play-btn').addEventListener('click', startGame);
-  document.getElementById('reset-btn').addEventListener('click', resetPieces);
-  document.getElementById('replay-btn').addEventListener('click', () => {
-    winScr.classList.add('hidden'); startGame();
-  });
+  if (gameState === 'loading_next') {
+    startGame();
+  }
 };
-img.src = IMAGE_SRC;
+img.src = LEVELS[currentLevel];
+
+document.getElementById('play-btn').addEventListener('click', () => {
+  if (rawW) startGame();
+});
+document.getElementById('reset-btn').addEventListener('click', resetPieces);
+document.getElementById('replay-btn').addEventListener('click', () => {
+  winScr.classList.add('hidden');
+  currentLevel = (currentLevel + 1) % LEVELS.length;
+  gameState = 'loading_next';
+  img.src = LEVELS[currentLevel];
+});
 
 function resize() {
   canvas.width = innerWidth; canvas.height = innerHeight;
@@ -363,6 +373,8 @@ function winGame() {
   }
   setTimeout(() => {
     winTime.textContent = `Completed in ${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
+    const replayBtn = document.getElementById('replay-btn');
+    replayBtn.textContent = currentLevel === LEVELS.length - 1 ? 'PLAY AGAIN' : 'NEXT LEVEL';
     winScr.classList.remove('hidden');
   }, 1800);
 }
@@ -370,7 +382,7 @@ function winGame() {
 // ── Render ──────────────────────────────────────
 function drawBackground() {
   const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  g.addColorStop(0, '#0a0a1a'); g.addColorStop(.5, '#0d0d22'); g.addColorStop(1, '#08081a');
+  g.addColorStop(0, '#3d3d4d'); g.addColorStop(.5, '#404055'); g.addColorStop(1, '#3b3b4d');
   ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height);
   const t = Date.now() * .001;
   starField.forEach(s => {

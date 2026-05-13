@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Grab a Crab – Octopus Physics</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            /* Prevent pull-to-refresh / overscroll on mobile */
+            overscroll-behavior: none;
+            touch-action: none;
+            background-color: #0d1117;
+            background-image: url('background.png');
+            background-size: cover;
+            background-position: center;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        #octopus-head-img {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 550px;
+            height: 550px;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+            will-change: transform; /* GPU-composited layer for wobble */
+        }
+        #scoreboard {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 0 0 #000, 0 2px 0 #000;
+            z-index: 200;
+            pointer-events: none;
+        }
+        #combo-display {
+            font-size: 1.8rem;
+            color: #ffcc00;
+            transition: transform 0.2s;
+        }
+        #win-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 300;
+            display: none; /* toggled to flex on win */
+        }
+        #win-screen h1 { font-size: 6rem; margin: 0; color: #ffcc00; text-shadow: 4px 4px 0 #000; }
+        #win-screen p { font-size: 2.5rem; text-shadow: 2px 2px 0 #000; }
+        canvas {
+            display: block;
+            touch-action: none; /* prevent browser gestures on the game canvas */
+        }
+        /* ---- Mobile responsive scaling ---- */
+        @media (max-width: 768px) {
+            #octopus-head-img { width: 320px; height: 320px; bottom: -30px; }
+            #scoreboard { font-size: 1.5rem; top: 12px; left: 12px; }
+            #combo-display { font-size: 1.1rem; }
+            #win-screen h1 { font-size: 3.5rem; }
+            #win-screen p { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    <img id="octopus-head-img" src="octopus_head.png" alt="Octopus Boss">
+    
+    <div id="scoreboard">
+        Score: <span id="score-val">0</span> / 1000<br>
+        <div id="combo-display">Combo: x<span id="combo-val">1</span></div>
+    </div>
+    <div id="win-screen">
+        <h1>YOU WIN!</h1>
+        <p>The Octopus is full.</p>
+    </div>
+
+    <script>
+        // Matter.js Module Aliases
+        const { Engine, Render, Runner, Composites, Common, MouseConstraint, Mouse, Composite, Bodies, Constraint, Body } = Matter;
+
+        // ──────────────────────────────────
+        // 1. ASSET PRE-LOADING
+        // ──────────────────────────────────
+        const assets = {
+            link: new Image(),
+            lobster: new Image(),
+            clam: new Image(),
+            head: new Image()
+        };
+
+        const fallbackSvg = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="20" fill="gray"/></svg>')}`;
+
+        let loadedCount = 0;
+        const totalAssets = 4;
+
+        const startSimulation = () => {
+            loadedCount++;
+            if (loadedCount >= totalAssets) {
+                init();
+            }
+        };
+
+        assets.link.onload = startSimulation;
+        assets.link.onerror = () => { assets.link.src = fallbackSvg; };
+        assets.link.src = 'tentacle_section.png';
+
+        assets.lobster.onload = startSimulation;
+        assets.lobster.onerror = () => { assets.lobster.src = fallbackSvg; };
+        assets.lobster.src = 'lobster.png';
+
+        assets.clam.onload = startSimulation;
+        assets.clam.onerror = () => { assets.clam.src = fallbackSvg; };
+        assets.clam.src = 'clam.png';
+
+        assets.head.onload = startSimulation;
+        assets.head.onerror = () => { assets.head.src = fallbackSvg; };
+        assets.head.src = 'octopus_head.png';
+
+        // ──────────────────────────────────
+        // 2. MAIN INIT
+        // ──────────────────────────────────
+        function init() {
+            const W = window.innerWidth;
+            const H = window.innerHeight;
+            const isMobile = W < 768;
+
+            const config = {
+                wireframes: false,
+                linkWidth: isMobile ? 30 : 40,
+                linkHeight: isMobile ? 45 : 60,
+                crabRadius: isMobile ? 25 : 35,
+                maxPrey: isMobile ? 8 : 12,       // fewer bodies on mobile
+                tentacleLinks: isMobile ? 8 : 12   // shorter tentacle on mobile
+            };
+
+            const engine = Engine.create();
+            const world = engine.world;
+            engine.world.gravity.y = -0.8;
+
+            // Cap pixelRatio at 2 to avoid GPU overload on 3× retina phones
+            const cappedPixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+            const render = Render.create({
+                element: document.getElementById('canvas-container'),
+                engine: engine,
+                options: {
+                    width: W,
+                    height: H,
+                    wireframes: config.wireframes,
+                    background: 'transparent',
+                    pixelRatio: cappedPixelRatio
+                }
+            });
+
+            Render.run(render);
+            const runner = Runner.create();
+            Runner.run(runner, engine);
+
+            // ──────────────────────────────────
+            // 3. BOUNDARIES (walls + ceiling)
+            // ──────────────────────────────────
+            const wallThickness = 50;
+            const walls = [
+                // Ceiling
+                Bodies.rectangle(W / 2, -wallThickness / 2, W * 2, wallThickness, { isStatic: true, render: { visible: false } }),
+                // Left wall
+                Bodies.rectangle(-wallThickness / 2, H / 2, wallThickness, H * 2, { isStatic: true, render: { visible: false } }),
+                // Right wall
+                Bodies.rectangle(W + wallThickness / 2, H / 2, wallThickness, H * 2, { isStatic: true, render: { visible: false } })
+            ];
+            Composite.add(world, walls);
+
+            // ──────────────────────────────────
+            // 4. TENTACLE
+            // ──────────────────────────────────
+            const tentacleGroup = Body.nextGroup(true);
+
+            const createTentacle = (x, y, length) => {
+                const bodies = [];
+                let currentY = y - (length * config.linkHeight * 2);
+                
+                for (let i = 0; i < length; i++) {
+                    const scale = 1.0 + (i / (length - 1)) * 2.0;
+                    const w = config.linkWidth * scale;
+                    const h = config.linkHeight * scale;
+                    
+                    const body = Bodies.rectangle(x, currentY, w, h, { 
+                        collisionFilter: { group: tentacleGroup },
+                        chamfer: 5,
+                        render: {
+                            sprite: {
+                                texture: assets.link.src,
+                                xScale: w / (assets.link.width || 40),
+                                yScale: h / (assets.link.height || 60)
+                            }
+                        }
+                    });
+                    body.segmentHeight = h;
+                    bodies.push(body);
+                    currentY += h;
+                }
+                
+                const chain = Composite.create({ bodies: bodies });
+                Composites.chain(chain, 0, 0.4, 0, -0.4, { 
+                    stiffness: 0.9, 
+                    length: 2, 
+                    render: { visible: false } 
+                });
+
+                const bottomBody = chain.bodies[length - 1];
+                Composite.add(chain, Constraint.create({ 
+                    bodyB: bottomBody,
+                    pointB: { x: 0, y: bottomBody.segmentHeight / 2 },
+                    pointA: { x, y },
+                    length: 0,
+                    stiffness: 1,
+                    render: { visible: false }
+                }));
+
+                return chain;
+            };
+
+            const centerX = W / 2;
+            const bottomY = H;
+            const tentacle = createTentacle(centerX, bottomY, config.tentacleLinks);
+            Composite.add(world, tentacle);
+
+            // Build a Set of tentacle body IDs for O(1) collision lookup
+            const tentacleBodySet = new Set();
+            const tentacleBodyIndexMap = new Map();
+            tentacle.bodies.forEach((b, idx) => {
+                tentacleBodySet.add(b.id);
+                tentacleBodyIndexMap.set(b.id, idx);
+            });
+
+            // ──────────────────────────────────
+            // 5. OCTOPUS HEAD (DOM overlay)
+            // ──────────────────────────────────
+            const headImg = document.getElementById('octopus-head-img');
+            headImg.style.display = 'block';
+
+            // ──────────────────────────────────
+            // 6. GAME STATE
+            // ──────────────────────────────────
+            let preyArray = [];
+            let stuckPrey = [];
+            
+            let score = 0;
+            let comboMultiplier = 1;
+            let lastEatenTime = 0;
+            let gameOver = false;
+            
+            const scoreEl = document.getElementById('score-val');
+            const comboEl = document.getElementById('combo-val');
+            const comboContainer = document.getElementById('combo-display');
+            const winScreen = document.getElementById('win-screen');
+
+            // ──────────────────────────────────
+            // 7. PREY SPAWNING
+            // ──────────────────────────────────
+            setInterval(() => {
+                if (gameOver || preyArray.length > config.maxPrey) return; 
+                const xPos = Math.random() * (W - 100) + 50;
+                
+                const isLobster = Math.random() > 0.5;
+                const asset = isLobster ? assets.lobster : assets.clam;
+                
+                const preyBody = Bodies.circle(xPos, 100, config.crabRadius, {
+                    frictionAir: isLobster ? 0.02 : 0.08,
+                    density: 0.002,
+                    restitution: 0.8, 
+                    render: {
+                        sprite: {
+                            texture: asset.src,
+                            xScale: (config.crabRadius * 2.2) / (asset.width || 60),
+                            yScale: (config.crabRadius * 2.2) / (asset.height || 60)
+                        }
+                    }
+                });
+                
+                preyBody.isPrey = true;
+                preyBody.preyType = isLobster ? 'lobster' : 'clam';
+                preyBody.baseValue = isLobster ? 50 : 10;
+                preyBody.baseScaleX = (config.crabRadius * 2.2) / (asset.width || 60);
+                preyBody.baseScaleY = (config.crabRadius * 2.2) / (asset.height || 60);
+                
+                preyArray.push(preyBody);
+                Composite.add(world, preyBody);
+            }, 2500);
+
+            // ──────────────────────────────────
+            // 8. SINGLE beforeUpdate (merged for perf)
+            //    – Scurry / Wobble / Slide / Score
+            // ──────────────────────────────────
+            let lastWobbleTime = 0;
+
+            Matter.Events.on(engine, 'beforeUpdate', () => {
+                const time = Common.now();
+
+                // --- Wobble timer ---
+                const doWobble = (time - lastWobbleTime > 150);
+                if (doWobble) lastWobbleTime = time;
+
+                // --- Free prey: movement + wobble ---
+                for (let i = 0; i < preyArray.length; i++) {
+                    const prey = preyArray[i];
+
+                    if (!prey.isStuck) {
+                        if (prey.preyType === 'lobster') {
+                            if (Math.random() < 0.05) {
+                                Body.applyForce(prey, prey.position, {
+                                    x: (Math.random() - 0.5) * 0.15,
+                                    y: (Math.random() - 0.2) * 0.08
+                                });
+                            }
+                            // Speed cap
+                            const vx = prey.velocity.x;
+                            if (vx > 15 || vx < -15) {
+                                Body.setVelocity(prey, { x: Math.max(-15, Math.min(15, vx)), y: prey.velocity.y });
+                            }
+                        } else {
+                            Body.applyForce(prey, prey.position, { x: (Math.random() - 0.5) * 0.003, y: 0 });
+                        }
+                    }
+                    
+                    // Stop-motion wobble
+                    if (doWobble && prey.render.sprite.texture) {
+                        const ws = 1.0 + (Math.random() - 0.5) * 0.1;
+                        prey.render.sprite.xScale = prey.baseScaleX * ws;
+                        prey.render.sprite.yScale = prey.baseScaleY * ws;
+                        Body.setAngle(prey, prey.angle + (Math.random() - 0.5) * 0.2);
+                    }
+                }
+
+                // --- Wobble head (DOM) ---
+                if (doWobble) {
+                    const ws = 1.0 + (Math.random() - 0.5) * 0.03;
+                    headImg.style.transform = `translateX(-50%) scale(${ws})`;
+                }
+
+                // --- Skip slide/score if game over ---
+                if (gameOver) return;
+
+                // --- Combo timeout ---
+                if (time - lastEatenTime > 2000 && comboMultiplier > 1) {
+                    comboMultiplier = 1;
+                    comboEl.textContent = '1';
+                    comboContainer.style.transform = 'scale(1)';
+                }
+
+                // --- Slide down & eat (in-place splice to avoid allocation) ---
+                for (let i = stuckPrey.length - 1; i >= 0; i--) {
+                    const info = stuckPrey[i];
+                    if (time - info.lastMoveTime <= 800) continue;
+
+                    info.lastMoveTime = time;
+
+                    if (info.currentLink < tentacle.bodies.length - 1) {
+                        info.currentLink++;
+                        info.constraint.bodyB = tentacle.bodies[info.currentLink];
+                    } else {
+                        // Eat!
+                        Composite.remove(world, info.constraint);
+                        Composite.remove(world, info.prey);
+
+                        // Remove from preyArray (swap-remove for O(1))
+                        const preyIdx = preyArray.indexOf(info.prey);
+                        if (preyIdx !== -1) {
+                            preyArray[preyIdx] = preyArray[preyArray.length - 1];
+                            preyArray.pop();
+                        }
+
+                        // Scoring
+                        if (time - lastEatenTime <= 2000 && score > 0) {
+                            comboMultiplier++;
+                            comboContainer.style.transform = `scale(${1 + Math.min(comboMultiplier, 10) * 0.1})`;
+                        } else {
+                            comboMultiplier = 1;
+                            comboContainer.style.transform = 'scale(1)';
+                        }
+                        
+                        lastEatenTime = time;
+                        score += info.prey.baseValue * comboMultiplier;
+                        scoreEl.textContent = score;
+                        comboEl.textContent = comboMultiplier;
+                        
+                        if (score >= 1000) {
+                            gameOver = true;
+                            winScreen.style.display = 'flex';
+                        }
+
+                        // Splice this entry out
+                        stuckPrey.splice(i, 1);
+                    }
+                }
+            });
+
+            // ──────────────────────────────────
+            // 9. COLLISION – sticking (O(1) lookup)
+            // ──────────────────────────────────
+            Matter.Events.on(engine, 'collisionStart', (event) => {
+                const pairs = event.pairs;
+                for (let i = 0; i < pairs.length; i++) {
+                    const { bodyA, bodyB } = pairs[i];
+                    const aIsTent = tentacleBodySet.has(bodyA.id);
+                    const bIsTent = tentacleBodySet.has(bodyB.id);
+                    
+                    const aIsPrey = bodyA.isPrey;
+                    const bIsPrey = bodyB.isPrey;
+
+                    if ((aIsTent && bIsPrey) || (bIsTent && aIsPrey)) {
+                        const preyBody = aIsPrey ? bodyA : bodyB;
+                        const tentacleBody = aIsTent ? bodyA : bodyB;
+
+                        if (!preyBody.isStuck) {
+                            preyBody.isStuck = true;
+                            const linkIndex = tentacleBodyIndexMap.get(tentacleBody.id);
+                            
+                            const stickConstraint = Constraint.create({
+                                bodyA: preyBody,
+                                bodyB: tentacleBody,
+                                pointA: { x: 0, y: 0 },
+                                pointB: { x: 0, y: 0 },
+                                stiffness: 0.6,
+                                render: { visible: false }
+                            });
+                            
+                            Composite.add(world, stickConstraint);
+                            stuckPrey.push({ 
+                                prey: preyBody, 
+                                constraint: stickConstraint, 
+                                currentLink: linkIndex, 
+                                lastMoveTime: time || Common.now()
+                            });
+                        }
+                    }
+                }
+            });
+
+            // ──────────────────────────────────
+            // 10. MOUSE / TOUCH INPUT
+            // ──────────────────────────────────
+            const mouse = Mouse.create(render.canvas);
+            const mouseConstraint = MouseConstraint.create(engine, {
+                mouse: mouse,
+                constraint: {
+                    stiffness: 0.1,
+                    render: { visible: false }
+                }
+            });
+            Composite.add(world, mouseConstraint);
+            render.mouse = mouse;
+
+            // Fix Matter.js touch offset on mobile
+            // Matter.js Mouse listens for mouse events but can mis-handle touch offset
+            // This ensures touches translate correctly on mobile viewports
+            render.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
+            render.canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+            render.canvas.addEventListener('touchend', (e) => { e.preventDefault(); }, { passive: false });
+
+            // ──────────────────────────────────
+            // 11. RESIZE HANDLER (debounced)
+            // ──────────────────────────────────
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    const newW = window.innerWidth;
+                    const newH = window.innerHeight;
+                    render.canvas.width = newW;
+                    render.canvas.height = newH;
+                    render.options.width = newW;
+                    render.options.height = newH;
+                    
+                    // Update tentacle anchor
+                    const anchorConstraint = world.constraints.find(
+                        c => c.bodyB === tentacle.bodies[tentacle.bodies.length - 1] && !c.bodyA
+                    );
+                    if (anchorConstraint) {
+                        anchorConstraint.pointA = { x: newW / 2, y: newH };
+                    }
+                }, 150);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -567,16 +567,35 @@
             resetGame(true);
 
             // Play button
-            document.getElementById('play-btn').addEventListener('click', () => {
+            document.getElementById('play-btn').addEventListener('click', async () => {
+                // Request fullscreen first (required by many mobile browsers before locking orientation)
+                try {
+                    const docEl = document.documentElement;
+                    if (docEl.requestFullscreen) {
+                        await docEl.requestFullscreen();
+                    } else if (docEl.webkitRequestFullscreen) { /* Safari */
+                        await docEl.webkitRequestFullscreen();
+                    } else if (docEl.msRequestFullscreen) { /* IE11 */
+                        await docEl.msRequestFullscreen();
+                    }
+                } catch (e) {
+                    console.log("Fullscreen request failed:", e);
+                }
+
+                // Attempt to lock orientation
+                if (screen.orientation && screen.orientation.lock) {
+                    try {
+                        await screen.orientation.lock('landscape');
+                    } catch (e) {
+                        console.log("Orientation lock failed:", e);
+                    }
+                }
+
                 SFX.init();
                 SFX.playMusic();
                 startScreen.style.display = 'none';
                 
-                // Attempt to lock orientation
-                if (screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch(e => console.log("Orientation lock not allowed without fullscreen or not supported."));
-                }
-                
+                // Start the physics runner once
                 Runner.run(runner, engine);
             });
         }
@@ -694,13 +713,8 @@
                 Composite.add(world, mouseConstraint);
             }
 
-            if (!isFirstLoad) {
-                // If we're resetting, stop the runner to ensure we don't have multiple loops
-                Runner.stop(runner);
-                // Reset the engine timing to avoid "jumps" or speed-ups
-                engine.timing.timestamp = 0;
-                Runner.run(runner, engine);
-            }
+            // We do NOT stop or restart the runner here. The game loop continues to tick.
+            // We just clear the world and recreate the bodies to perform the reset.
             console.log("Game reset complete. links:", neededLinks);
         }
 

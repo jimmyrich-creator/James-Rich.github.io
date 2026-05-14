@@ -11,13 +11,19 @@
             box-sizing: border-box;
         }
 
-        body {
+        html, body {
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            position: relative;
             width: 100vw;
             height: 100vh;
+            width: 100dvw;
+            height: 100dvh;
+            overflow: hidden;
+            position: fixed;
+            inset: 0;
+        }
+
+        body {
             /* Prevent pull-to-refresh / overscroll on mobile */
             overscroll-behavior: none;
             touch-action: none;
@@ -25,12 +31,13 @@
             background-image: url('background.png');
             background-size: cover;
             background-position: center;
+            background-attachment: fixed;
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
         #octopus-head-container {
-            position: absolute;
-            bottom: -80px;
+            position: fixed;
+            bottom: -100px;
             left: 50%;
             transform: translateX(-50%);
             width: 375px;
@@ -46,7 +53,7 @@
         body.is-mobile #octopus-head-container {
             width: 180px;
             height: 180px;
-            bottom: -40px;
+            bottom: -50px;
         }
 
         body.is-mobile .eye {
@@ -79,10 +86,37 @@
             font-size: 0.85rem;
         }
 
+        /* Landscape specific mobile adjustments */
+        body.is-mobile.is-landscape #octopus-head-container {
+            width: 120px;
+            height: 120px;
+            bottom: -35px;
+        }
+
+        body.is-mobile.is-landscape .eye {
+            width: 15px;
+            height: 15px;
+            top: 40px;
+        }
+
+        body.is-mobile.is-landscape .eye-left {
+            left: 42px;
+        }
+
+        body.is-mobile.is-landscape .eye-right {
+            left: 63px;
+        }
+
+        body.is-mobile.is-landscape #scoreboard {
+            font-size: 0.8rem;
+        }
+
         #octopus-head-img {
             width: 100%;
             height: 100%;
             display: block;
+            object-fit: contain;
+            object-position: bottom;
         }
 
         .eye {
@@ -146,11 +180,11 @@
         }
 
         .end-screen {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.8);
             flex-direction: column;
             justify-content: center;
@@ -235,7 +269,11 @@
         canvas {
             display: block;
             touch-action: none;
-            /* prevent browser gestures on the game canvas */
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         }
@@ -648,6 +686,28 @@
             sharkArray = [];
             sharkBodySet.clear();
             
+            // Re-calculate config based on current dimensions
+            W = window.innerWidth || document.documentElement.clientWidth;
+            H = window.innerHeight || document.documentElement.clientHeight;
+            
+            // Sync canvas size precisely
+            if (render && render.canvas) {
+                render.canvas.width = W;
+                render.canvas.height = H;
+                render.options.width = W;
+                render.options.height = H;
+            }
+            
+            // Detect mobile via user-agent OR small screen
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                          || (navigator.maxTouchPoints > 1 && (W < 1024 || H < 600));
+            const isPortrait = H > W;
+
+            // Mark body so CSS rules apply
+            document.body.classList.toggle('is-mobile', isMobile);
+            document.body.classList.toggle('is-portrait', isPortrait);
+            document.body.classList.toggle('is-landscape', !isPortrait);
+
             scoreEl.textContent = '0';
             comboEl.textContent = '1';
             comboContainer.style.transform = 'scale(1)';
@@ -663,37 +723,26 @@
             }
             world.gravity.y = -0.4;
 
-            // Re-calculate config based on current dimensions
-            W = window.innerWidth;
-            H = window.innerHeight;
-            // Detect mobile via user-agent OR small screen
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-                          || (navigator.maxTouchPoints > 1 && W < 1024);
-            const isPortrait = H > W;
-
-            // Mark body so CSS rules apply
-            if (isMobile) {
-                document.body.classList.add('is-mobile');
-            } else {
-                document.body.classList.remove('is-mobile');
-            }
-
-            // Scale everything smaller on mobile so nothing is zoomed/oversized
-            const baseLinkHeight = isMobile ? 14 : 30;
-            const baseLinkWidth  = isMobile ? 38 : 80;
+            // Use clientWidth/Height for more stability on mobile
+            W = document.documentElement.clientWidth;
+            H = document.documentElement.clientHeight;
+            
+            // Drastically scale down for mobile landscape
+            const baseLinkHeight = isMobile ? (isPortrait ? 14 : 6) : 30;
+            const baseLinkWidth  = isMobile ? (isPortrait ? 38 : 18) : 80;
             const avgLinkHeight  = baseLinkHeight * 2.0;
-            const neededLinks    = Math.ceil(H / avgLinkHeight) + (isPortrait ? 4 : 2);
+            const neededLinks    = Math.ceil(H / avgLinkHeight) + (isPortrait ? 4 : 1);
 
             config = {
                 linkWidth:     baseLinkWidth,
                 linkHeight:    baseLinkHeight,
-                crabRadius:    isMobile ? 14 : 35,
+                crabRadius:    isMobile ? (isPortrait ? 12 : 8) : 35,
                 maxPrey:       isMobile ? 8  : 12,
                 tentacleLinks: neededLinks,
-                sharkRadius:   isMobile ? 28 : 55,
+                sharkRadius:   isMobile ? (isPortrait ? 22 : 14) : 55,
                 maxSharks:     isMobile ? 2  : 3,
-                // Safe Y zone for sharks: top 35% of screen (well above octopus head at bottom)
-                sharkMaxY:     isMobile ? H * 0.35 : H * 0.5
+                // Safe Y zone for sharks: top 18% in landscape
+                sharkMaxY:     isMobile ? (isPortrait ? H * 0.35 : H * 0.18) : H * 0.5
             };
 
             // Re-add boundaries
@@ -769,6 +818,9 @@
             const isPortrait = window.innerHeight > window.innerWidth;
             const rotateOverlay = document.getElementById('rotate-overlay');
             
+            document.body.classList.toggle('is-portrait', isPortrait);
+            document.body.classList.toggle('is-landscape', !isPortrait);
+
             if (isMobile && isPortrait) {
                 rotateOverlay.style.display = 'flex';
             } else {
@@ -932,12 +984,13 @@
             setInterval(() => {
                 if (gameOver || sharkArray.length >= config.maxSharks) return;
                 const isMob = document.body.classList.contains('is-mobile');
-                const sharkVisualW = isMob ? 120 : 240;
-                const sharkVisualH = isMob ? 80  : 160;
+                const isPort = window.innerHeight > window.innerWidth;
+                const sharkVisualW = isMob ? (isPort ? 120 : 100) : 240;
+                const sharkVisualH = isMob ? (isPort ? 80 : 65) : 160;
                 const fromLeft = Math.random() > 0.5;
                 const startX = fromLeft ? -sharkVisualW : W + sharkVisualW;
-                // Clamp spawn Y so sharks always stay in the safe upper zone, never near the octopus head
-                const startY = Math.random() * (config.sharkMaxY - sharkVisualH) + sharkVisualH;
+                // Clamp spawn Y so sharks always stay in the safe upper zone
+                const startY = Math.random() * (config.sharkMaxY - sharkVisualH) + (sharkVisualH / 2) + 20;
                 const speed = (Math.random() * 2 + 2) * (fromLeft ? 1 : -1);
                 const frames = fromLeft ? sharkFramesRight : sharkFramesLeft;
                 const sharkBody = Bodies.rectangle(startX, startY, sharkVisualW * 0.65, sharkVisualH * 0.5, {

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Grab a Crab – Octopus Physics</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
@@ -94,15 +94,16 @@
             top: 20px;
             left: 20px;
             color: white;
-            font-size: 2.5rem;
+            font-size: clamp(1.2rem, 4vw, 2.5rem);
             font-weight: bold;
             text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 0 0 #000, 0 2px 0 #000;
             z-index: 200;
             pointer-events: none;
+            line-height: 1.2;
         }
 
         #combo-display {
-            font-size: 1.8rem;
+            font-size: clamp(0.9rem, 3vw, 1.8rem);
             color: #ffcc00;
             transition: transform 0.2s;
         }
@@ -149,15 +150,17 @@
         }
 
         .end-screen h1 {
-            font-size: 6rem;
+            font-size: clamp(3rem, 15vw, 8rem);
             margin: 0;
             text-shadow: 4px 4px 0 #000;
+            text-align: center;
         }
 
         .end-screen p {
-            font-size: 2.5rem;
+            font-size: clamp(1.2rem, 5vw, 2.5rem);
             text-shadow: 2px 2px 0 #000;
             margin: 10px 0 30px;
+            text-align: center;
         }
 
         #win-screen h1 {
@@ -272,12 +275,12 @@
     <div id="win-screen" class="end-screen">
         <h1>YOU WIN!</h1>
         <p>The Octopus is full!</p>
-        <button class="retry-btn" onclick="location.reload()">Play Again</button>
+        <button class="retry-btn" onclick="resetGame()">Play Again</button>
     </div>
     <div id="gameover-screen" class="end-screen">
         <h1>GAME OVER</h1>
         <p>A shark chomped your tentacle!</p>
-        <button class="retry-btn" onclick="location.reload()">Retry</button>
+        <button class="retry-btn" onclick="resetGame()">Retry</button>
     </div>
 
     <div id="start-screen" class="end-screen">
@@ -453,7 +456,7 @@
         const startSimulation = () => {
             loadedCount++;
             if (loadedCount >= totalAssets) {
-                init();
+                initGame();
             }
         };
 
@@ -486,216 +489,55 @@
         assets.tip.src = 'tentacle_tip.png';
 
         // ──────────────────────────────────
-        // 2. MAIN INIT
+        // 2. GLOBAL GAME STATE
         // ──────────────────────────────────
-        function init() {
-            const W = window.innerWidth;
-            const H = window.innerHeight;
-            const isMobile = W < 768;
+        let engine, render, runner, world;
+        let tentacle, tentacleBodySet, tentacleBodyIndexMap;
+        let preyArray = [], stuckPrey = [], sharkArray = [], sharkBodySet = new Set();
+        let score = 0, comboMultiplier = 1, lastEatenTime = 0, gameOver = false;
+        let W, H, config;
 
-            const config = {
-                wireframes: false,
-                linkWidth: isMobile ? 60 : 80,
-                linkHeight: isMobile ? 22 : 30,    // Halved for more fluidity
-                crabRadius: isMobile ? 25 : 35,
-                maxPrey: isMobile ? 8 : 12,       
-                tentacleLinks: isMobile ? 11 : 17, // Reduced by 30% for better balance
-                sharkRadius: isMobile ? 40 : 55,
-                maxSharks: isMobile ? 2 : 3
-            };
+        const scoreEl = document.getElementById('score-val');
+        const comboEl = document.getElementById('combo-val');
+        const comboContainer = document.getElementById('combo-display');
+        const winScreen = document.getElementById('win-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const startScreen = document.getElementById('start-screen');
+        const headContainer = document.getElementById('octopus-head-container');
+        const pupils = document.querySelectorAll('.pupil');
+        const eyeStates = [{ x: 0, y: 0, vx: 0, vy: 0 }, { x: 0, y: 0, vx: 0, vy: 0 }];
 
-            const engine = Engine.create();
-            const world = engine.world;
-            engine.world.gravity.y = -0.4; // Reduced from -0.8 to be less floaty
+        let sharkFramesRight = [], sharkFramesLeft = [];
 
-            // Cap pixelRatio at 2 to avoid GPU overload on 3× retina phones
+        // ──────────────────────────────────
+        // 3. MAIN INIT
+        // ──────────────────────────────────
+        function initGame() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+
+            engine = Engine.create();
+            world = engine.world;
+            engine.world.gravity.y = -0.4;
+
             const cappedPixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
-            const render = Render.create({
+            render = Render.create({
                 element: document.getElementById('canvas-container'),
                 engine: engine,
                 options: {
                     width: W,
                     height: H,
-                    wireframes: config.wireframes,
+                    wireframes: false,
                     background: 'transparent',
                     pixelRatio: cappedPixelRatio
                 }
             });
 
             Render.run(render);
-            const runner = Runner.create();
-            // Do NOT run the runner yet — wait for Play button
+            runner = Runner.create();
 
-            // Initialize SFX on Play
-            const startBtn = document.getElementById('play-btn');
-            const startScreen = document.getElementById('start-screen');
-
-            startBtn.addEventListener('click', () => {
-                SFX.init();
-                SFX.playMusic();
-                startScreen.style.display = 'none';
-                Runner.run(runner, engine);
-            });
-
-            // ──────────────────────────────────
-            // 3. BOUNDARIES (walls + ceiling)
-            // ──────────────────────────────────
-            const wallThickness = 50;
-            const walls = [
-                // Ceiling
-                Bodies.rectangle(W / 2, -wallThickness / 2, W * 2, wallThickness, { isStatic: true, render: { visible: false } }),
-                // Left wall
-                Bodies.rectangle(-wallThickness / 2, H / 2, wallThickness, H * 2, { isStatic: true, render: { visible: false } }),
-                // Right wall
-                Bodies.rectangle(W + wallThickness / 2, H / 2, wallThickness, H * 2, { isStatic: true, render: { visible: false } })
-            ];
-            Composite.add(world, walls);
-
-            // ──────────────────────────────────
-            // 4. TENTACLE
-            // ──────────────────────────────────
-            const tentacleGroup = Body.nextGroup(true);
-
-            const createTentacle = (x, y, length) => {
-                const bodies = [];
-                // Start all segments clumped near the bottom anchor point
-                let currentY = y;
-
-                for (let i = 0; i < length; i++) {
-                    const scale = 1.0 + (i / (length - 1)) * 2.0;
-                    const w = config.linkWidth * scale;
-                    const h = config.linkHeight * scale;
-
-                    const body = Bodies.rectangle(x, currentY, w, h, {
-                        collisionFilter: { group: tentacleGroup },
-                        chamfer: 5,
-                        density: 0.005,      // Heavier segments
-                        frictionAir: 0.05,   // More damped / less floaty
-                        render: {
-                            zIndex: 10, // Keep tentacle in front
-                            sprite: {
-                                texture: (i === 0) ? assets.tip.src : assets.link.src,
-                                xScale: w / ((i === 0 ? assets.tip.width : assets.link.width) || 40),
-                                yScale: (h / ((i === 0 ? assets.tip.height : assets.link.height) || 60)) * 1.25 // Overlap to hide gaps
-                            }
-                        }
-                    });
-                    body.segmentHeight = h;
-                    bodies.push(body);
-                    currentY += h;
-                }
-
-                const chain = Composite.create({ bodies: bodies });
-                Composites.chain(chain, 0, 0.4, 0, -0.4, {
-                    stiffness: 0.9,
-                    length: 2,
-                    render: { visible: false }
-                });
-
-                const bottomBody = chain.bodies[length - 1];
-                Composite.add(chain, Constraint.create({
-                    bodyB: bottomBody,
-                    pointB: { x: 0, y: bottomBody.segmentHeight / 2 },
-                    pointA: { x, y },
-                    length: 0,
-                    stiffness: 1,
-                    render: { visible: false }
-                }));
-
-                return chain;
-            };
-
-            const centerX = W / 2;
-            const bottomY = H;
-            const tentacle = createTentacle(centerX, bottomY, config.tentacleLinks);
-            Composite.add(world, tentacle);
-
-            // Build a Set of tentacle body IDs for O(1) collision lookup
-            const tentacleBodySet = new Set();
-            const tentacleBodyIndexMap = new Map();
-            tentacle.bodies.forEach((b, idx) => {
-                tentacleBodySet.add(b.id);
-                tentacleBodyIndexMap.set(b.id, idx);
-            });
-
-            // ──────────────────────────────────
-            // 5. OCTOPUS HEAD (DOM overlay)
-            // ──────────────────────────────────
-            const headContainer = document.getElementById('octopus-head-container');
-            const headImg = document.getElementById('octopus-head-img');
-            headContainer.style.display = 'block';
-
-            // Googly eye state
-            const pupils = document.querySelectorAll('.pupil');
-            const eyeStates = [
-                { x: 0, y: 0, vx: 0, vy: 0 },
-                { x: 0, y: 0, vx: 0, vy: 0 }
-            ];
-
-            // ──────────────────────────────────
-            // 6. GAME STATE
-            // ──────────────────────────────────
-            let preyArray = [];
-            let stuckPrey = [];
-            let sharkArray = [];
-
-            let score = 0;
-            let comboMultiplier = 1;
-            let lastEatenTime = 0;
-            let gameOver = false;
-
-            const scoreEl = document.getElementById('score-val');
-            const comboEl = document.getElementById('combo-val');
-            const comboContainer = document.getElementById('combo-display');
-            const winScreen = document.getElementById('win-screen');
-            const gameoverScreen = document.getElementById('gameover-screen');
-
-            // ──────────────────────────────────
-            // 7. PREY SPAWNING
-            // ──────────────────────────────────
-            setInterval(() => {
-                if (gameOver || preyArray.length > config.maxPrey) return;
-                const xPos = Math.random() * (W - 100) + 50;
-
-                const isLobster = Math.random() > 0.5;
-                const asset = isLobster ? assets.lobster : assets.clam;
-
-                const preyBody = Bodies.circle(xPos, 100, config.crabRadius, {
-                    frictionAir: isLobster ? 0.02 : 0.08,
-                    density: 0.002,
-                    restitution: 0.8,
-                    render: {
-                        zIndex: 5, // Prey goes behind tentacle
-                        sprite: {
-                            texture: asset.src,
-                            xScale: (config.crabRadius * 2.2) / (asset.width || 60),
-                            yScale: (config.crabRadius * 2.2) / (asset.height || 60)
-                        }
-                    }
-                });
-
-                preyBody.isPrey = true;
-                preyBody.preyType = isLobster ? 'lobster' : 'clam';
-                preyBody.baseValue = isLobster ? 50 : 10;
-                preyBody.baseScaleX = (config.crabRadius * 2.2) / (asset.width || 60);
-                preyBody.baseScaleY = (config.crabRadius * 2.2) / (asset.height || 60);
-
-                preyArray.push(preyBody);
-                Composite.add(world, preyBody);
-            }, 2500);
-
-            // ──────────────────────────────────
-            // 7b. SHARK SPAWNING
-            // ──────────────────────────────────
-            const sharkBodySet = new Set();
-            const sharkVisualW = isMobile ? 180 : 240;
-            const sharkVisualH = isMobile ? 120 : 160;
-            const sharkPhysW = sharkVisualW * 0.65;
-            const sharkPhysH = sharkVisualH * 0.5;
-
-            // Frame 1 (Open) naturally faces RIGHT. Frame 2 (Closed) naturally faces LEFT.
-            // We need 4 frames total so they always match direction without runtime flipping:
+            // Prepare shark frames once
             function flipImageToDataURL(img) {
                 const c = document.createElement('canvas');
                 c.width = img.width;
@@ -706,89 +548,177 @@
                 ctx.drawImage(img, 0, 0);
                 return c.toDataURL('image/png');
             }
+            sharkFramesRight = [assets.sharkOpen.src, flipImageToDataURL(assets.sharkClosed)];
+            sharkFramesLeft = [flipImageToDataURL(assets.sharkOpen), assets.sharkClosed.src];
 
-            const sharkOpenRightSrc = assets.sharkOpen.src; // Naturally faces right
-            const sharkClosedRightSrc = flipImageToDataURL(assets.sharkClosed); // Flip left to right
+            // Setup mouse/touch
+            const mouse = Mouse.create(render.canvas);
+            const mouseConstraint = MouseConstraint.create(engine, {
+                mouse: mouse,
+                constraint: { stiffness: 0.1, render: { visible: false } }
+            });
+            Composite.add(world, mouseConstraint);
+            render.mouse = mouse;
 
-            const sharkOpenLeftSrc = flipImageToDataURL(assets.sharkOpen); // Flip right to left
-            const sharkClosedLeftSrc = assets.sharkClosed.src; // Naturally faces left
+            render.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
+            render.canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+            render.canvas.addEventListener('touchend', (e) => { e.preventDefault(); }, { passive: false });
 
-            const sharkFramesRight = [sharkOpenRightSrc, sharkClosedRightSrc];
-            const sharkFramesLeft = [sharkOpenLeftSrc, sharkClosedLeftSrc];
+            // Event Listeners
+            setupEventListeners();
+            
+            // First time setup
+            resetGame(true);
 
-            setInterval(() => {
-                if (gameOver || sharkArray.length >= config.maxSharks) return;
-                const fromLeft = Math.random() > 0.5;
-                const startX = fromLeft ? -sharkVisualW : W + sharkVisualW;
-                const startY = Math.random() * (H * 0.4) + 50;
-                const speed = (Math.random() * 2 + 2) * (fromLeft ? 1 : -1);
+            // Play button
+            document.getElementById('play-btn').addEventListener('click', () => {
+                SFX.init();
+                SFX.playMusic();
+                startScreen.style.display = 'none';
+                Runner.run(runner, engine);
+            });
+        }
 
-                const spriteXScale = sharkVisualW / (assets.sharkOpen.width || 120);
-                const spriteYScale = sharkVisualH / (assets.sharkOpen.height || 80);
+        function resetGame(isFirstLoad = false) {
+            // Reset state
+            gameOver = false;
+            score = 0;
+            comboMultiplier = 1;
+            lastEatenTime = 0;
+            preyArray = [];
+            stuckPrey = [];
+            sharkArray = [];
+            sharkBodySet.clear();
+            
+            scoreEl.textContent = '0';
+            comboEl.textContent = '1';
+            comboContainer.style.transform = 'scale(1)';
+            winScreen.style.display = 'none';
+            gameoverScreen.style.display = 'none';
+            headContainer.style.display = 'block';
 
-                // Pick the correct pre-baked direction frames
-                const frames = fromLeft ? sharkFramesRight : sharkFramesLeft;
+            // Clear world
+            Composite.clear(world, false);
+            world.gravity.y = -0.4;
 
-                const sharkBody = Bodies.rectangle(startX, startY, sharkPhysW, sharkPhysH, {
-                    isSensor: true,
-                    frictionAir: 0,
+            // Re-calculate config based on current dimensions
+            W = window.innerWidth;
+            H = window.innerHeight;
+            const isMobile = W < 768;
+            const isPortrait = H > W;
+
+            // Reachability logic: Calculate links based on height
+            // We want the tentacle to reach slightly beyond the top of the screen
+            // Link height scales from 1.0 to 3.0, average is 2.0
+            const baseLinkHeight = isMobile ? 22 : 30;
+            const avgLinkHeight = baseLinkHeight * 2.0;
+            // Add extra links to ensure reachability in tall portrait screens
+            const neededLinks = Math.ceil(H / avgLinkHeight) + (isPortrait ? 4 : 2);
+
+            config = {
+                linkWidth: isMobile ? 60 : 80,
+                linkHeight: baseLinkHeight,
+                crabRadius: isMobile ? 25 : 35,
+                maxPrey: isMobile ? 8 : 12,       
+                tentacleLinks: neededLinks,
+                sharkRadius: isMobile ? 40 : 55,
+                maxSharks: isMobile ? 2 : 3
+            };
+
+            // Re-add boundaries
+            const wallThickness = 50;
+            Composite.add(world, [
+                Bodies.rectangle(W / 2, -wallThickness / 2, W * 2, wallThickness, { isStatic: true, render: { visible: false } }),
+                Bodies.rectangle(-wallThickness / 2, H / 2, wallThickness, H * 2, { isStatic: true, render: { visible: false } }),
+                Bodies.rectangle(W + wallThickness / 2, H / 2, wallThickness, H * 2, { isStatic: true, render: { visible: false } })
+            ]);
+
+            // Re-create tentacle
+            const tentacleGroup = Body.nextGroup(true);
+            const centerX = W / 2;
+            const bottomY = H;
+            
+            const bodies = [];
+            let currentY = bottomY;
+            for (let i = 0; i < config.tentacleLinks; i++) {
+                const scale = 1.0 + (i / (config.tentacleLinks - 1)) * 2.0;
+                const w = config.linkWidth * scale;
+                const h = config.linkHeight * scale;
+                const body = Bodies.rectangle(centerX, currentY, w, h, {
+                    collisionFilter: { group: tentacleGroup },
+                    chamfer: 5,
+                    density: 0.005,
+                    frictionAir: 0.05,
                     render: {
+                        zIndex: 10,
                         sprite: {
-                            texture: frames[0],
-                            xScale: spriteXScale,  // Always positive — no flipping
-                            yScale: spriteYScale
+                            texture: (i === 0) ? assets.tip.src : assets.link.src,
+                            xScale: w / ((i === 0 ? assets.tip.width : assets.link.width) || 40),
+                            yScale: (h / ((i === 0 ? assets.tip.height : assets.link.height) || 60)) * 1.25
                         }
                     }
                 });
-                sharkBody.isShark = true;
-                sharkBody.sharkSpeed = speed;
-                sharkBody.baseScaleX = spriteXScale;
-                sharkBody.baseScaleY = spriteYScale;
-                sharkBody.animFrame = 0;
-                sharkBody.sharkFrames = frames; // store which direction's frames to use
-                Body.setInertia(sharkBody, Infinity);
+                body.segmentHeight = h;
+                bodies.push(body);
+                currentY += h;
+            }
 
-                sharkArray.push(sharkBody);
-                sharkBodySet.add(sharkBody.id);
-                Composite.add(world, sharkBody);
-            }, 4000);
+            tentacle = Composite.create({ bodies: bodies });
+            Composites.chain(tentacle, 0, 0.4, 0, -0.4, { stiffness: 0.9, length: 2, render: { visible: false } });
 
-            // ──────────────────────────────────
-            // 8. SINGLE beforeUpdate (merged for perf)
-            //    – Scurry / Wobble / Sharks / Slide / Score
-            // ──────────────────────────────────
+            const bottomBody = tentacle.bodies[config.tentacleLinks - 1];
+            Composite.add(tentacle, Constraint.create({
+                bodyB: bottomBody,
+                pointB: { x: 0, y: bottomBody.segmentHeight / 2 },
+                pointA: { x: centerX, y: bottomY },
+                length: 0, stiffness: 1, render: { visible: false }
+            }));
+
+            Composite.add(world, tentacle);
+
+            tentacleBodySet = new Set();
+            tentacleBodyIndexMap = new Map();
+            tentacle.bodies.forEach((b, idx) => {
+                tentacleBodySet.add(b.id);
+                tentacleBodyIndexMap.set(b.id, idx);
+            });
+
+            // Re-add mouse constraint to new world
+            const mouse = Mouse.create(render.canvas);
+            const mouseConstraint = MouseConstraint.create(engine, {
+                mouse: mouse,
+                constraint: { stiffness: 0.1, render: { visible: false } }
+            });
+            Composite.add(world, mouseConstraint);
+            render.mouse = mouse;
+
+            if (!isFirstLoad) {
+                // If we're resetting, make sure runner is running
+                Runner.run(runner, engine);
+            }
+        }
+
+        function setupEventListeners() {
             let lastWobbleTime = 0;
-
             Matter.Events.on(engine, 'beforeUpdate', () => {
                 const time = Common.now();
-
-                // --- Wobble timer ---
                 const doWobble = (time - lastWobbleTime > 150);
                 if (doWobble) lastWobbleTime = time;
 
-                // --- Free prey: movement + wobble ---
+                // Prey logic
                 for (let i = 0; i < preyArray.length; i++) {
                     const prey = preyArray[i];
-
                     if (!prey.isStuck) {
                         if (prey.preyType === 'lobster') {
                             if (Math.random() < 0.05) {
-                                Body.applyForce(prey, prey.position, {
-                                    x: (Math.random() - 0.5) * 0.15,
-                                    y: (Math.random() - 0.2) * 0.08
-                                });
+                                Body.applyForce(prey, prey.position, { x: (Math.random() - 0.5) * 0.15, y: (Math.random() - 0.2) * 0.08 });
                             }
-                            // Speed cap
                             const vx = prey.velocity.x;
-                            if (vx > 15 || vx < -15) {
-                                Body.setVelocity(prey, { x: Math.max(-15, Math.min(15, vx)), y: prey.velocity.y });
-                            }
+                            if (vx > 15 || vx < -15) Body.setVelocity(prey, { x: Math.max(-15, Math.min(15, vx)), y: prey.velocity.y });
                         } else {
                             Body.applyForce(prey, prey.position, { x: (Math.random() - 0.5) * 0.003, y: 0 });
                         }
                     }
-
-                    // Stop-motion wobble
                     if (doWobble && prey.render.sprite.texture) {
                         const ws = 1.0 + (Math.random() - 0.5) * 0.1;
                         prey.render.sprite.xScale = prey.baseScaleX * ws;
@@ -797,103 +727,66 @@
                     }
                 }
 
-                // --- Shark swimming + wobble ---
+                // Shark logic
                 for (let i = sharkArray.length - 1; i >= 0; i--) {
                     const shark = sharkArray[i];
-                    // Override velocity every frame: constant horizontal, zero vertical (negates gravity)
                     Body.setVelocity(shark, { x: shark.sharkSpeed, y: 0 });
                     Body.setAngle(shark, 0);
-
-                    // Remove if off-screen
-                    if ((shark.sharkSpeed > 0 && shark.position.x > W + 200) ||
-                        (shark.sharkSpeed < 0 && shark.position.x < -200)) {
+                    if ((shark.sharkSpeed > 0 && shark.position.x > W + 200) || (shark.sharkSpeed < 0 && shark.position.x < -200)) {
                         Composite.remove(world, shark);
                         sharkBodySet.delete(shark.id);
                         sharkArray.splice(i, 1);
                     }
-
-                    // Wobble + frame cycling animation
                     if (doWobble && shark.render.sprite.texture) {
-                        // Cycle animation frame (open mouth / closed mouth)
                         shark.animFrame = (shark.animFrame + 1) % 2;
                         shark.render.sprite.texture = shark.sharkFrames[shark.animFrame];
-
                         const ws = 1.0 + (Math.random() - 0.5) * 0.06;
                         shark.render.sprite.xScale = shark.baseScaleX * ws;
                         shark.render.sprite.yScale = shark.baseScaleY * ws;
                     }
                 }
 
-                // --- Wobble head (DOM) ---
+                // Wobble head
                 if (doWobble) {
                     const ws = 1.0 + (Math.random() - 0.5) * 0.03;
                     headContainer.style.transform = `translateX(-50%) scale(${ws})`;
                 }
 
-                // --- Googly Eyes Logic ---
-                // We use the tentacle's movement or just random physics to move pupils
+                // Eyes
                 const tentacleVelocity = tentacle.bodies[0].velocity;
                 eyeStates.forEach((state, i) => {
-                    // Pupils are attracted to center but affected by "inertia" of the head
-                    const targetX = tentacleVelocity.x * 2;
-                    const targetY = tentacleVelocity.y * 2;
-
-                    // Simple spring physics
-                    const ax = (targetX - state.x) * 0.1;
-                    const ay = (targetY - state.y) * 0.1;
-
-                    state.vx += ax;
-                    state.vy += ay;
-                    state.vx *= 0.85; // Friction
-                    state.vy *= 0.85;
-
-                    state.x += state.vx;
-                    state.y += state.vy;
-
-                    // Clamp to eye bounds
-                    const limit = 12;
-                    const dist = Math.sqrt(state.x * state.x + state.y * state.y);
-                    if (dist > limit) {
-                        state.x = (state.x / dist) * limit;
-                        state.y = (state.y / dist) * limit;
-                    }
-
+                    const targetX = tentacleVelocity.x * 2, targetY = tentacleVelocity.y * 2;
+                    state.vx += (targetX - state.x) * 0.1;
+                    state.vy += (targetY - state.y) * 0.1;
+                    state.vx *= 0.85; state.vy *= 0.85;
+                    state.x += state.vx; state.y += state.vy;
+                    const limit = 12, dist = Math.sqrt(state.x * state.x + state.y * state.y);
+                    if (dist > limit) { state.x = (state.x / dist) * limit; state.y = (state.y / dist) * limit; }
                     pupils[i].style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px))`;
                 });
 
-                // --- Skip slide/score if game over ---
                 if (gameOver) return;
 
-                // --- Combo timeout ---
+                // Combo timeout
                 if (time - lastEatenTime > 2000 && comboMultiplier > 1) {
                     comboMultiplier = 1;
                     comboEl.textContent = '1';
                     comboContainer.style.transform = 'scale(1)';
                 }
 
-                // --- Slide down & eat (in-place splice to avoid allocation) ---
+                // Slide & Eat
                 for (let i = stuckPrey.length - 1; i >= 0; i--) {
                     const info = stuckPrey[i];
                     if (time - info.lastMoveTime <= 1200) continue;
-
                     info.lastMoveTime = time;
-
                     if (info.currentLink < tentacle.bodies.length - 1) {
                         info.currentLink++;
                         info.constraint.bodyB = tentacle.bodies[info.currentLink];
                     } else {
-                        // Eat!
                         Composite.remove(world, info.constraint);
                         Composite.remove(world, info.prey);
-
-                        // Remove from preyArray (swap-remove for O(1))
                         const preyIdx = preyArray.indexOf(info.prey);
-                        if (preyIdx !== -1) {
-                            preyArray[preyIdx] = preyArray[preyArray.length - 1];
-                            preyArray.pop();
-                        }
-
-                        // Scoring
+                        if (preyIdx !== -1) { preyArray[preyIdx] = preyArray[preyArray.length - 1]; preyArray.pop(); }
                         if (time - lastEatenTime <= 2000 && score > 0) {
                             comboMultiplier++;
                             comboContainer.style.transform = `scale(${1 + Math.min(comboMultiplier, 10) * 0.1})`;
@@ -901,188 +794,118 @@
                             comboMultiplier = 1;
                             comboContainer.style.transform = 'scale(1)';
                         }
-
                         lastEatenTime = time;
                         score += info.prey.baseValue * comboMultiplier;
                         scoreEl.textContent = score;
                         comboEl.textContent = comboMultiplier;
-
-                        if (score >= 1000) {
-                            gameOver = true;
-                            winScreen.style.display = 'flex';
-                        }
-
-                        // Splice this entry out
+                        if (score >= 1000) { gameOver = true; winScreen.style.display = 'flex'; }
                         stuckPrey.splice(i, 1);
                     }
                 }
             });
 
-            // ──────────────────────────────────
-            // 9. COLLISION – sticking + shark chop
-            // ──────────────────────────────────
-            const triggerGameOver = (chopIndex) => {
-                if (gameOver) return;
-                gameOver = true;
-
-                SFX.playChompSnap();
-
-                // Flip world gravity to make things fall down dramatically
-                world.gravity.y = 0.8;
-
-                // Sever only the joint connecting the hit segment to the rest of the tentacle
-                const allConstraints = Composite.allConstraints(world);
-                for (let c = allConstraints.length - 1; c >= 0; c--) {
-                    const con = allConstraints[c];
-
-                    // Check if this constraint connects the severed part (0 to chopIndex) 
-                    // to the anchored part (chopIndex + 1 to end)
-                    if (con.bodyA && con.bodyB) {
-                        const idxA = tentacleBodyIndexMap.get(con.bodyA.id);
-                        const idxB = tentacleBodyIndexMap.get(con.bodyB.id);
-
-                        if (idxA !== undefined && idxB !== undefined) {
-                            // If it bridges the cut point, remove it
-                            const minIdx = Math.min(idxA, idxB);
-                            const maxIdx = Math.max(idxA, idxB);
-                            if (minIdx <= chopIndex && maxIdx > chopIndex) {
-                                Composite.remove(world, con, true);
-                            }
-                        }
-                    }
-
-                    // Also check the world anchor constraint
-                    if (!con.bodyA && con.bodyB) {
-                        const idx = tentacleBodyIndexMap.get(con.bodyB.id);
-                        if (idx !== undefined && idx <= chopIndex) {
-                            Composite.remove(world, con, true);
-                        }
-                    }
-                }
-
-                // Release any stuck prey on the severed portion
-                for (const info of stuckPrey) {
-                    if (info.currentLink <= chopIndex) {
-                        Composite.remove(world, info.constraint, true);
-                    }
-                }
-                stuckPrey = [];
-
-                // Give the severed part a little horizontal kick
-                for (let s = 0; s <= chopIndex; s++) {
-                    const seg = tentacle.bodies[s];
-                    if (seg) {
-                        Body.setVelocity(seg, { x: (Math.random() - 0.5) * 10, y: 5 });
-                    }
-                }
-
-                // Show game-over
-                setTimeout(() => {
-                    gameoverScreen.style.display = 'flex';
-                }, 200);
-            };
-
             Matter.Events.on(engine, 'collisionStart', (event) => {
                 const pairs = event.pairs;
                 for (let i = 0; i < pairs.length; i++) {
                     const { bodyA, bodyB } = pairs[i];
-                    const aIsTent = tentacleBodySet.has(bodyA.id);
-                    const bIsTent = tentacleBodySet.has(bodyB.id);
-
-                    // --- SHARK vs TENTACLE ---
-                    const aIsShark = sharkBodySet.has(bodyA.id);
-                    const bIsShark = sharkBodySet.has(bodyB.id);
+                    const aIsTent = tentacleBodySet.has(bodyA.id), bIsTent = tentacleBodySet.has(bodyB.id);
+                    const aIsShark = sharkBodySet.has(bodyA.id), bIsShark = sharkBodySet.has(bodyB.id);
 
                     if ((aIsTent && bIsShark) || (bIsTent && aIsShark)) {
                         const tentacleBody = aIsTent ? bodyA : bodyB;
                         const chopIdx = tentacleBodyIndexMap.get(tentacleBody.id);
-                        if (chopIdx !== undefined) {
-                            triggerGameOver(chopIdx);
-                        }
-                        continue; // skip prey logic for this pair
+                        if (chopIdx !== undefined) triggerGameOver(chopIdx);
+                        continue;
                     }
 
-                    // --- PREY vs TENTACLE ---
-                    const aIsPrey = bodyA.isPrey;
-                    const bIsPrey = bodyB.isPrey;
-
+                    const aIsPrey = bodyA.isPrey, bIsPrey = bodyB.isPrey;
                     if ((aIsTent && bIsPrey) || (bIsTent && aIsPrey)) {
-                        const preyBody = aIsPrey ? bodyA : bodyB;
-                        const tentacleBody = aIsTent ? bodyA : bodyB;
-
+                        const preyBody = aIsPrey ? bodyA : bodyB, tentacleBody = aIsTent ? bodyA : bodyB;
                         if (!preyBody.isStuck) {
                             preyBody.isStuck = true;
-                            // Turn into a sensor so it stops colliding with the tentacle (fixes the violent glitching)
                             preyBody.isSensor = true;
                             SFX.playSquelch();
                             const linkIndex = tentacleBodyIndexMap.get(tentacleBody.id);
-
-                            const stickConstraint = Constraint.create({
-                                bodyA: preyBody,
-                                bodyB: tentacleBody,
-                                pointA: { x: 0, y: 0 },
-                                pointB: { x: 0, y: 0 },
-                                stiffness: 1.0, // Lock to center for sliding
-                                render: { visible: false }
-                            });
-
+                            const stickConstraint = Constraint.create({ bodyA: preyBody, bodyB: tentacleBody, stiffness: 1.0, render: { visible: false } });
                             Composite.add(world, stickConstraint);
-                            stuckPrey.push({
-                                prey: preyBody,
-                                constraint: stickConstraint,
-                                currentLink: linkIndex,
-                                lastMoveTime: Common.now()
-                            });
+                            stuckPrey.push({ prey: preyBody, constraint: stickConstraint, currentLink: linkIndex, lastMoveTime: Common.now() });
                         }
                     }
                 }
             });
 
-            // ──────────────────────────────────
-            // 10. MOUSE / TOUCH INPUT
-            // ──────────────────────────────────
-            const mouse = Mouse.create(render.canvas);
-            const mouseConstraint = MouseConstraint.create(engine, {
-                mouse: mouse,
-                constraint: {
-                    stiffness: 0.1,
-                    render: { visible: false }
-                }
-            });
-            Composite.add(world, mouseConstraint);
-            render.mouse = mouse;
+            // Spawning timers
+            setInterval(() => {
+                if (gameOver || preyArray.length > config.maxPrey) return;
+                const xPos = Math.random() * (W - 100) + 50;
+                const isLobster = Math.random() > 0.5, asset = isLobster ? assets.lobster : assets.clam;
+                const preyBody = Bodies.circle(xPos, 100, config.crabRadius, {
+                    frictionAir: isLobster ? 0.02 : 0.08, density: 0.002, restitution: 0.8,
+                    render: { zIndex: 5, sprite: { texture: asset.src, xScale: (config.crabRadius * 2.2) / (asset.width || 60), yScale: (config.crabRadius * 2.2) / (asset.height || 60) } }
+                });
+                preyBody.isPrey = true; preyBody.preyType = isLobster ? 'lobster' : 'clam'; preyBody.baseValue = isLobster ? 50 : 10;
+                preyBody.baseScaleX = (config.crabRadius * 2.2) / (asset.width || 60); preyBody.baseScaleY = (config.crabRadius * 2.2) / (asset.height || 60);
+                preyArray.push(preyBody); Composite.add(world, preyBody);
+            }, 2500);
 
-            // Fix Matter.js touch offset on mobile
-            // Matter.js Mouse listens for mouse events but can mis-handle touch offset
-            // This ensures touches translate correctly on mobile viewports
-            render.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
-            render.canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
-            render.canvas.addEventListener('touchend', (e) => { e.preventDefault(); }, { passive: false });
+            setInterval(() => {
+                if (gameOver || sharkArray.length >= config.maxSharks) return;
+                const fromLeft = Math.random() > 0.5, sharkVisualW = W < 768 ? 180 : 240, sharkVisualH = W < 768 ? 120 : 160;
+                const startX = fromLeft ? -sharkVisualW : W + sharkVisualW, startY = Math.random() * (H * 0.4) + 50;
+                const speed = (Math.random() * 2 + 2) * (fromLeft ? 1 : -1), frames = fromLeft ? sharkFramesRight : sharkFramesLeft;
+                const sharkBody = Bodies.rectangle(startX, startY, sharkVisualW * 0.65, sharkVisualH * 0.5, {
+                    isSensor: true, frictionAir: 0, render: { sprite: { texture: frames[0], xScale: sharkVisualW / (assets.sharkOpen.width || 120), yScale: sharkVisualH / (assets.sharkOpen.height || 80) } }
+                });
+                sharkBody.isShark = true; sharkBody.sharkSpeed = speed; sharkBody.baseScaleX = sharkVisualW / (assets.sharkOpen.width || 120);
+                sharkBody.baseScaleY = sharkVisualH / (assets.sharkOpen.height || 80); sharkBody.animFrame = 0; sharkBody.sharkFrames = frames;
+                Body.setInertia(sharkBody, Infinity); sharkArray.push(sharkBody); sharkBodySet.add(sharkBody.id); Composite.add(world, sharkBody);
+            }, 4000);
 
-            // ──────────────────────────────────
-            // 11. RESIZE HANDLER (debounced)
-            // ──────────────────────────────────
+            // Resize handler
             let resizeTimer;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(() => {
-                    const newW = window.innerWidth;
-                    const newH = window.innerHeight;
-                    render.canvas.width = newW;
-                    render.canvas.height = newH;
-                    render.options.width = newW;
-                    render.options.height = newH;
-
-                    // Update tentacle anchor
-                    const anchorConstraint = world.constraints.find(
-                        c => c.bodyB === tentacle.bodies[tentacle.bodies.length - 1] && !c.bodyA
-                    );
-                    if (anchorConstraint) {
-                        anchorConstraint.pointA = { x: newW / 2, y: newH };
-                    }
-                }, 150);
+                    const newW = window.innerWidth, newH = window.innerHeight;
+                    if (Math.abs(newW - W) < 50 && Math.abs(newH - H) < 50) return; // Ignore small mobile browser bar jumps
+                    
+                    render.canvas.width = newW; render.canvas.height = newH;
+                    render.options.width = newW; render.options.height = newH;
+                    
+                    // Full reset on major resize/orientation change to recalculate tentacle links
+                    resetGame();
+                }, 200);
             });
         }
+
+        const triggerGameOver = (chopIndex) => {
+            if (gameOver) return;
+            gameOver = true;
+            SFX.playChompSnap();
+            world.gravity.y = 0.8;
+            const allConstraints = Composite.allConstraints(world);
+            for (let c = allConstraints.length - 1; c >= 0; c--) {
+                const con = allConstraints[c];
+                if (con.bodyA && con.bodyB) {
+                    const idxA = tentacleBodyIndexMap.get(con.bodyA.id), idxB = tentacleBodyIndexMap.get(con.bodyB.id);
+                    if (idxA !== undefined && idxB !== undefined) {
+                        const minIdx = Math.min(idxA, idxB), maxIdx = Math.max(idxA, idxB);
+                        if (minIdx <= chopIndex && maxIdx > chopIndex) Composite.remove(world, con, true);
+                    }
+                }
+                if (!con.bodyA && con.bodyB) {
+                    const idx = tentacleBodyIndexMap.get(con.bodyB.id);
+                    if (idx !== undefined && idx <= chopIndex) Composite.remove(world, con, true);
+                }
+            }
+            for (const info of stuckPrey) if (info.currentLink <= chopIndex) Composite.remove(world, info.constraint, true);
+            stuckPrey = [];
+            for (let s = 0; s <= chopIndex; s++) {
+                const seg = tentacle.bodies[s];
+                if (seg) Body.setVelocity(seg, { x: (Math.random() - 0.5) * 10, y: 5 });
+            }
+            setTimeout(() => { gameoverScreen.style.display = 'flex'; }, 200);
+        };
     </script>
 </body>
 

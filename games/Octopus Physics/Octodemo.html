@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Grab a Crab – Octopus Physics</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -23,18 +27,68 @@
             background-position: center;
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
-        #octopus-head-img {
+
+        #octopus-head-container {
             position: absolute;
-            bottom: -50px;
+            bottom: -80px;
             left: 50%;
             transform: translateX(-50%);
-            width: 550px;
-            height: 550px;
+            width: 375px;
+            height: 375px;
             pointer-events: none;
             z-index: 100;
             display: none;
-            will-change: transform; /* GPU-composited layer for wobble */
+            will-change: transform;
+            /* GPU-composited layer for wobble */
         }
+
+        #octopus-head-img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .eye {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            background: white;
+            border-radius: 50%;
+            border: 4px solid #333;
+            top: 120px;
+            overflow: hidden;
+        }
+
+        .eye-left {
+            left: 130px;
+        }
+
+        .eye-right {
+            left: 200px;
+        }
+
+        .pupil {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: black;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .pupil::after {
+            content: '';
+            position: absolute;
+            width: 7px;
+            height: 7px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+        }
+
         #scoreboard {
             position: absolute;
             top: 20px;
@@ -46,55 +100,337 @@
             z-index: 200;
             pointer-events: none;
         }
+
         #combo-display {
             font-size: 1.8rem;
             color: #ffcc00;
             transition: transform 0.2s;
         }
-        #win-screen {
+
+        .end-screen {
             position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             background: rgba(0, 0, 0, 0.8);
             flex-direction: column;
             justify-content: center;
             align-items: center;
             color: white;
             z-index: 300;
-            display: none; /* toggled to flex on win */
+            display: none;
+            /* toggled to flex on win/loss/start */
         }
-        #win-screen h1 { font-size: 6rem; margin: 0; color: #ffcc00; text-shadow: 4px 4px 0 #000; }
-        #win-screen p { font-size: 2.5rem; text-shadow: 2px 2px 0 #000; }
+
+        #start-screen {
+            display: flex;
+            background: linear-gradient(rgba(0, 100, 200, 0.4), rgba(0, 0, 0, 0.8)), url('background.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        #start-screen h1 {
+            font-size: 8rem;
+            margin-bottom: 20px;
+            color: #ffcc00;
+        }
+
+        .start-btn {
+            padding: 22px 70px;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #00ff88, #00bbff);
+            color: #000;
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.4);
+        }
+
+        .start-btn:hover {
+            box-shadow: 0 15px 40px rgba(0, 255, 136, 0.6);
+        }
+
+        .end-screen h1 {
+            font-size: 6rem;
+            margin: 0;
+            text-shadow: 4px 4px 0 #000;
+        }
+
+        .end-screen p {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 0 #000;
+            margin: 10px 0 30px;
+        }
+
+        #win-screen h1 {
+            color: #ffcc00;
+        }
+
+        #gameover-screen h1 {
+            color: #ff4444;
+        }
+
+        .retry-btn {
+            padding: 18px 50px;
+            font-size: 2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #ffcc00, #ff8800);
+            color: #000;
+            text-shadow: none;
+            box-shadow: 0 6px 20px rgba(255, 136, 0, 0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+            pointer-events: auto;
+        }
+
+        .retry-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 8px 30px rgba(255, 136, 0, 0.6);
+        }
+
+        .retry-btn:active {
+            transform: scale(0.96);
+        }
+
         canvas {
             display: block;
-            touch-action: none; /* prevent browser gestures on the game canvas */
+            touch-action: none;
+            /* prevent browser gestures on the game canvas */
         }
+
         /* ---- Mobile responsive scaling ---- */
         @media (max-width: 768px) {
-            #octopus-head-img { width: 320px; height: 320px; bottom: -30px; }
-            #scoreboard { font-size: 1.5rem; top: 12px; left: 12px; }
-            #combo-display { font-size: 1.1rem; }
-            #win-screen h1 { font-size: 3.5rem; }
-            #win-screen p { font-size: 1.5rem; }
+            #octopus-head-container {
+                width: 225px;
+                height: 225px;
+                bottom: -50px;
+            }
+
+            .eye {
+                width: 30px;
+                height: 30px;
+                top: 75px;
+                border-width: 3px;
+            }
+
+            .eye-left {
+                left: 65px;
+            }
+
+            .eye-right {
+                left: 125px;
+            }
+
+            .pupil {
+                width: 14px;
+                height: 14px;
+            }
+
+            #scoreboard {
+                font-size: 1.5rem;
+                top: 12px;
+                left: 12px;
+            }
+
+            #combo-display {
+                font-size: 1.1rem;
+            }
+
+            .end-screen h1 {
+                font-size: 3.5rem;
+            }
+
+            .end-screen p {
+                font-size: 1.5rem;
+            }
+
+            .retry-btn {
+                font-size: 1.4rem;
+                padding: 14px 36px;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <div id="canvas-container"></div>
-    <img id="octopus-head-img" src="octopus_head.png" alt="Octopus Boss">
-    
+    <div id="octopus-head-container">
+        <img id="octopus-head-img" src="octopus_head.png" alt="Octopus Boss">
+        <div class="eye eye-left">
+            <div class="pupil"></div>
+        </div>
+        <div class="eye eye-right">
+            <div class="pupil"></div>
+        </div>
+    </div>
+
     <div id="scoreboard">
         Score: <span id="score-val">0</span> / 1000<br>
         <div id="combo-display">Combo: x<span id="combo-val">1</span></div>
     </div>
-    <div id="win-screen">
+    <div id="win-screen" class="end-screen">
         <h1>YOU WIN!</h1>
-        <p>The Octopus is full.</p>
+        <p>The Octopus is full!</p>
+        <button class="retry-btn" onclick="location.reload()">Play Again</button>
+    </div>
+    <div id="gameover-screen" class="end-screen">
+        <h1>GAME OVER</h1>
+        <p>A shark chomped your tentacle!</p>
+        <button class="retry-btn" onclick="location.reload()">Retry</button>
+    </div>
+
+    <div id="start-screen" class="end-screen">
+        <h1>OCTOPUS FEAST</h1>
+        <p>Catch shellfish, avoid sharks!</p>
+        <button id="play-btn" class="retry-btn start-btn">PLAY</button>
     </div>
 
     <script>
         // Matter.js Module Aliases
         const { Engine, Render, Runner, Composites, Common, MouseConstraint, Mouse, Composite, Bodies, Constraint, Body } = Matter;
+
+        // ──────────────────────────────────
+        // 0. SOUND EFFECTS (Web Audio API)
+        // ──────────────────────────────────
+        const SFX = (() => {
+            let audioCtx = null;
+
+            const init = () => {
+                if (audioCtx) return;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            };
+
+            const playSquelch = () => {
+                if (!audioCtx) return;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+
+                // Add a little noise for the "squelch"
+                const bufferSize = audioCtx.sampleRate * 0.1;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const noiseGain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 1000;
+
+                noiseGain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start();
+            };
+
+            const playChompSnap = () => {
+                if (!audioCtx) return;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                // --- CHOMP ---
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc1.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.08);
+                gain1.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start();
+                osc1.stop(audioCtx.currentTime + 0.1);
+
+                // --- SNAP / PING ---
+                setTimeout(() => {
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                    osc2.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.2);
+                    gain2.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.start();
+                    osc2.stop(audioCtx.currentTime + 0.3);
+                }, 80);
+            };
+
+            const playMusic = () => {
+                if (!audioCtx) return;
+                const bpm = 110;
+                const stepTime = 60 / bpm / 2; // 1/8th note
+
+                let step = 0;
+                const bassNotes = [130.81, 164.81, 146.83, 174.61]; // C3, E3, D3, F3 approx
+                const melodyNotes = [261.63, 293.66, 329.63, 392.00, 440.00]; // C4 Pentatonic
+
+                setInterval(() => {
+                    if (audioCtx.state === 'suspended') return;
+
+                    const now = audioCtx.currentTime;
+
+                    // --- BASS (every 2 steps) ---
+                    if (step % 2 === 0) {
+                        const osc = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        osc.frequency.value = bassNotes[Math.floor(step / 4) % bassNotes.length];
+                        g.gain.setValueAtTime(0.1, now);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                        osc.connect(g).connect(audioCtx.destination);
+                        osc.start();
+                        osc.stop(now + 0.3);
+                    }
+
+                    // --- MELODY (random syncopation) ---
+                    if (Math.random() > 0.6) {
+                        const osc = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.value = melodyNotes[Math.floor(Math.random() * melodyNotes.length)];
+                        g.gain.setValueAtTime(0.08, now);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                        osc.connect(g).connect(audioCtx.destination);
+                        osc.start();
+                        osc.stop(now + 0.2);
+                    }
+
+                    // --- PERCUSSION (every step) ---
+                    const pOsc = audioCtx.createOscillator();
+                    const pG = audioCtx.createGain();
+                    pOsc.frequency.setValueAtTime(10, now); // low thud
+                    pG.gain.setValueAtTime(0.05, now);
+                    pG.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    pOsc.connect(pG).connect(audioCtx.destination);
+                    pOsc.start();
+                    pOsc.stop(now + 0.05);
+
+                    step++;
+                }, stepTime * 1000);
+            };
+
+            return { init, playSquelch, playChompSnap, playMusic };
+        })();
 
         // ──────────────────────────────────
         // 1. ASSET PRE-LOADING
@@ -103,13 +439,16 @@
             link: new Image(),
             lobster: new Image(),
             clam: new Image(),
-            head: new Image()
+            head: new Image(),
+            sharkOpen: new Image(),
+            sharkClosed: new Image(),
+            tip: new Image()
         };
 
         const fallbackSvg = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="20" fill="gray"/></svg>')}`;
 
         let loadedCount = 0;
-        const totalAssets = 4;
+        const totalAssets = 7;
 
         const startSimulation = () => {
             loadedCount++;
@@ -134,6 +473,18 @@
         assets.head.onerror = () => { assets.head.src = fallbackSvg; };
         assets.head.src = 'octopus_head.png';
 
+        assets.sharkOpen.onload = startSimulation;
+        assets.sharkOpen.onerror = () => { assets.sharkOpen.src = fallbackSvg; };
+        assets.sharkOpen.src = 'shark_open.png';
+
+        assets.sharkClosed.onload = startSimulation;
+        assets.sharkClosed.onerror = () => { assets.sharkClosed.src = fallbackSvg; };
+        assets.sharkClosed.src = 'shark_closed.png';
+
+        assets.tip.onload = startSimulation;
+        assets.tip.onerror = () => { assets.tip.src = fallbackSvg; };
+        assets.tip.src = 'tentacle_tip.png';
+
         // ──────────────────────────────────
         // 2. MAIN INIT
         // ──────────────────────────────────
@@ -144,16 +495,18 @@
 
             const config = {
                 wireframes: false,
-                linkWidth: isMobile ? 30 : 40,
-                linkHeight: isMobile ? 45 : 60,
+                linkWidth: isMobile ? 60 : 80,
+                linkHeight: isMobile ? 22 : 30,    // Halved for more fluidity
                 crabRadius: isMobile ? 25 : 35,
-                maxPrey: isMobile ? 8 : 12,       // fewer bodies on mobile
-                tentacleLinks: isMobile ? 8 : 12   // shorter tentacle on mobile
+                maxPrey: isMobile ? 8 : 12,       
+                tentacleLinks: isMobile ? 11 : 17, // Reduced by 30% for better balance
+                sharkRadius: isMobile ? 40 : 55,
+                maxSharks: isMobile ? 2 : 3
             };
 
             const engine = Engine.create();
             const world = engine.world;
-            engine.world.gravity.y = -0.8;
+            engine.world.gravity.y = -0.4; // Reduced from -0.8 to be less floaty
 
             // Cap pixelRatio at 2 to avoid GPU overload on 3× retina phones
             const cappedPixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -172,7 +525,18 @@
 
             Render.run(render);
             const runner = Runner.create();
-            Runner.run(runner, engine);
+            // Do NOT run the runner yet — wait for Play button
+
+            // Initialize SFX on Play
+            const startBtn = document.getElementById('play-btn');
+            const startScreen = document.getElementById('start-screen');
+
+            startBtn.addEventListener('click', () => {
+                SFX.init();
+                SFX.playMusic();
+                startScreen.style.display = 'none';
+                Runner.run(runner, engine);
+            });
 
             // ──────────────────────────────────
             // 3. BOUNDARIES (walls + ceiling)
@@ -195,21 +559,25 @@
 
             const createTentacle = (x, y, length) => {
                 const bodies = [];
-                let currentY = y - (length * config.linkHeight * 2);
-                
+                // Start all segments clumped near the bottom anchor point
+                let currentY = y;
+
                 for (let i = 0; i < length; i++) {
                     const scale = 1.0 + (i / (length - 1)) * 2.0;
                     const w = config.linkWidth * scale;
                     const h = config.linkHeight * scale;
-                    
-                    const body = Bodies.rectangle(x, currentY, w, h, { 
+
+                    const body = Bodies.rectangle(x, currentY, w, h, {
                         collisionFilter: { group: tentacleGroup },
                         chamfer: 5,
+                        density: 0.005,      // Heavier segments
+                        frictionAir: 0.05,   // More damped / less floaty
                         render: {
+                            zIndex: 10, // Keep tentacle in front
                             sprite: {
-                                texture: assets.link.src,
-                                xScale: w / (assets.link.width || 40),
-                                yScale: h / (assets.link.height || 60)
+                                texture: (i === 0) ? assets.tip.src : assets.link.src,
+                                xScale: w / ((i === 0 ? assets.tip.width : assets.link.width) || 40),
+                                yScale: (h / ((i === 0 ? assets.tip.height : assets.link.height) || 60)) * 1.25 // Overlap to hide gaps
                             }
                         }
                     });
@@ -217,16 +585,16 @@
                     bodies.push(body);
                     currentY += h;
                 }
-                
+
                 const chain = Composite.create({ bodies: bodies });
-                Composites.chain(chain, 0, 0.4, 0, -0.4, { 
-                    stiffness: 0.9, 
-                    length: 2, 
-                    render: { visible: false } 
+                Composites.chain(chain, 0, 0.4, 0, -0.4, {
+                    stiffness: 0.9,
+                    length: 2,
+                    render: { visible: false }
                 });
 
                 const bottomBody = chain.bodies[length - 1];
-                Composite.add(chain, Constraint.create({ 
+                Composite.add(chain, Constraint.create({
                     bodyB: bottomBody,
                     pointB: { x: 0, y: bottomBody.segmentHeight / 2 },
                     pointA: { x, y },
@@ -254,40 +622,51 @@
             // ──────────────────────────────────
             // 5. OCTOPUS HEAD (DOM overlay)
             // ──────────────────────────────────
+            const headContainer = document.getElementById('octopus-head-container');
             const headImg = document.getElementById('octopus-head-img');
-            headImg.style.display = 'block';
+            headContainer.style.display = 'block';
+
+            // Googly eye state
+            const pupils = document.querySelectorAll('.pupil');
+            const eyeStates = [
+                { x: 0, y: 0, vx: 0, vy: 0 },
+                { x: 0, y: 0, vx: 0, vy: 0 }
+            ];
 
             // ──────────────────────────────────
             // 6. GAME STATE
             // ──────────────────────────────────
             let preyArray = [];
             let stuckPrey = [];
-            
+            let sharkArray = [];
+
             let score = 0;
             let comboMultiplier = 1;
             let lastEatenTime = 0;
             let gameOver = false;
-            
+
             const scoreEl = document.getElementById('score-val');
             const comboEl = document.getElementById('combo-val');
             const comboContainer = document.getElementById('combo-display');
             const winScreen = document.getElementById('win-screen');
+            const gameoverScreen = document.getElementById('gameover-screen');
 
             // ──────────────────────────────────
             // 7. PREY SPAWNING
             // ──────────────────────────────────
             setInterval(() => {
-                if (gameOver || preyArray.length > config.maxPrey) return; 
+                if (gameOver || preyArray.length > config.maxPrey) return;
                 const xPos = Math.random() * (W - 100) + 50;
-                
+
                 const isLobster = Math.random() > 0.5;
                 const asset = isLobster ? assets.lobster : assets.clam;
-                
+
                 const preyBody = Bodies.circle(xPos, 100, config.crabRadius, {
                     frictionAir: isLobster ? 0.02 : 0.08,
                     density: 0.002,
-                    restitution: 0.8, 
+                    restitution: 0.8,
                     render: {
+                        zIndex: 5, // Prey goes behind tentacle
                         sprite: {
                             texture: asset.src,
                             xScale: (config.crabRadius * 2.2) / (asset.width || 60),
@@ -295,20 +674,88 @@
                         }
                     }
                 });
-                
+
                 preyBody.isPrey = true;
                 preyBody.preyType = isLobster ? 'lobster' : 'clam';
                 preyBody.baseValue = isLobster ? 50 : 10;
                 preyBody.baseScaleX = (config.crabRadius * 2.2) / (asset.width || 60);
                 preyBody.baseScaleY = (config.crabRadius * 2.2) / (asset.height || 60);
-                
+
                 preyArray.push(preyBody);
                 Composite.add(world, preyBody);
             }, 2500);
 
             // ──────────────────────────────────
+            // 7b. SHARK SPAWNING
+            // ──────────────────────────────────
+            const sharkBodySet = new Set();
+            const sharkVisualW = isMobile ? 180 : 240;
+            const sharkVisualH = isMobile ? 120 : 160;
+            const sharkPhysW = sharkVisualW * 0.65;
+            const sharkPhysH = sharkVisualH * 0.5;
+
+            // Frame 1 (Open) naturally faces RIGHT. Frame 2 (Closed) naturally faces LEFT.
+            // We need 4 frames total so they always match direction without runtime flipping:
+            function flipImageToDataURL(img) {
+                const c = document.createElement('canvas');
+                c.width = img.width;
+                c.height = img.height;
+                const ctx = c.getContext('2d');
+                ctx.translate(c.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(img, 0, 0);
+                return c.toDataURL('image/png');
+            }
+
+            const sharkOpenRightSrc = assets.sharkOpen.src; // Naturally faces right
+            const sharkClosedRightSrc = flipImageToDataURL(assets.sharkClosed); // Flip left to right
+
+            const sharkOpenLeftSrc = flipImageToDataURL(assets.sharkOpen); // Flip right to left
+            const sharkClosedLeftSrc = assets.sharkClosed.src; // Naturally faces left
+
+            const sharkFramesRight = [sharkOpenRightSrc, sharkClosedRightSrc];
+            const sharkFramesLeft = [sharkOpenLeftSrc, sharkClosedLeftSrc];
+
+            setInterval(() => {
+                if (gameOver || sharkArray.length >= config.maxSharks) return;
+                const fromLeft = Math.random() > 0.5;
+                const startX = fromLeft ? -sharkVisualW : W + sharkVisualW;
+                const startY = Math.random() * (H * 0.4) + 50;
+                const speed = (Math.random() * 2 + 2) * (fromLeft ? 1 : -1);
+
+                const spriteXScale = sharkVisualW / (assets.sharkOpen.width || 120);
+                const spriteYScale = sharkVisualH / (assets.sharkOpen.height || 80);
+
+                // Pick the correct pre-baked direction frames
+                const frames = fromLeft ? sharkFramesRight : sharkFramesLeft;
+
+                const sharkBody = Bodies.rectangle(startX, startY, sharkPhysW, sharkPhysH, {
+                    isSensor: true,
+                    frictionAir: 0,
+                    render: {
+                        sprite: {
+                            texture: frames[0],
+                            xScale: spriteXScale,  // Always positive — no flipping
+                            yScale: spriteYScale
+                        }
+                    }
+                });
+                sharkBody.isShark = true;
+                sharkBody.sharkSpeed = speed;
+                sharkBody.baseScaleX = spriteXScale;
+                sharkBody.baseScaleY = spriteYScale;
+                sharkBody.animFrame = 0;
+                sharkBody.sharkFrames = frames; // store which direction's frames to use
+                Body.setInertia(sharkBody, Infinity);
+
+                sharkArray.push(sharkBody);
+                sharkBodySet.add(sharkBody.id);
+                Composite.add(world, sharkBody);
+            }, 4000);
+
+            // ──────────────────────────────────
             // 8. SINGLE beforeUpdate (merged for perf)
-            //    – Scurry / Wobble / Slide / Score
+            //    – Scurry / Wobble / Sharks / Slide / Score
             // ──────────────────────────────────
             let lastWobbleTime = 0;
 
@@ -340,7 +787,7 @@
                             Body.applyForce(prey, prey.position, { x: (Math.random() - 0.5) * 0.003, y: 0 });
                         }
                     }
-                    
+
                     // Stop-motion wobble
                     if (doWobble && prey.render.sprite.texture) {
                         const ws = 1.0 + (Math.random() - 0.5) * 0.1;
@@ -350,11 +797,69 @@
                     }
                 }
 
+                // --- Shark swimming + wobble ---
+                for (let i = sharkArray.length - 1; i >= 0; i--) {
+                    const shark = sharkArray[i];
+                    // Override velocity every frame: constant horizontal, zero vertical (negates gravity)
+                    Body.setVelocity(shark, { x: shark.sharkSpeed, y: 0 });
+                    Body.setAngle(shark, 0);
+
+                    // Remove if off-screen
+                    if ((shark.sharkSpeed > 0 && shark.position.x > W + 200) ||
+                        (shark.sharkSpeed < 0 && shark.position.x < -200)) {
+                        Composite.remove(world, shark);
+                        sharkBodySet.delete(shark.id);
+                        sharkArray.splice(i, 1);
+                    }
+
+                    // Wobble + frame cycling animation
+                    if (doWobble && shark.render.sprite.texture) {
+                        // Cycle animation frame (open mouth / closed mouth)
+                        shark.animFrame = (shark.animFrame + 1) % 2;
+                        shark.render.sprite.texture = shark.sharkFrames[shark.animFrame];
+
+                        const ws = 1.0 + (Math.random() - 0.5) * 0.06;
+                        shark.render.sprite.xScale = shark.baseScaleX * ws;
+                        shark.render.sprite.yScale = shark.baseScaleY * ws;
+                    }
+                }
+
                 // --- Wobble head (DOM) ---
                 if (doWobble) {
                     const ws = 1.0 + (Math.random() - 0.5) * 0.03;
-                    headImg.style.transform = `translateX(-50%) scale(${ws})`;
+                    headContainer.style.transform = `translateX(-50%) scale(${ws})`;
                 }
+
+                // --- Googly Eyes Logic ---
+                // We use the tentacle's movement or just random physics to move pupils
+                const tentacleVelocity = tentacle.bodies[0].velocity;
+                eyeStates.forEach((state, i) => {
+                    // Pupils are attracted to center but affected by "inertia" of the head
+                    const targetX = tentacleVelocity.x * 2;
+                    const targetY = tentacleVelocity.y * 2;
+
+                    // Simple spring physics
+                    const ax = (targetX - state.x) * 0.1;
+                    const ay = (targetY - state.y) * 0.1;
+
+                    state.vx += ax;
+                    state.vy += ay;
+                    state.vx *= 0.85; // Friction
+                    state.vy *= 0.85;
+
+                    state.x += state.vx;
+                    state.y += state.vy;
+
+                    // Clamp to eye bounds
+                    const limit = 12;
+                    const dist = Math.sqrt(state.x * state.x + state.y * state.y);
+                    if (dist > limit) {
+                        state.x = (state.x / dist) * limit;
+                        state.y = (state.y / dist) * limit;
+                    }
+
+                    pupils[i].style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px))`;
+                });
 
                 // --- Skip slide/score if game over ---
                 if (gameOver) return;
@@ -369,7 +874,7 @@
                 // --- Slide down & eat (in-place splice to avoid allocation) ---
                 for (let i = stuckPrey.length - 1; i >= 0; i--) {
                     const info = stuckPrey[i];
-                    if (time - info.lastMoveTime <= 800) continue;
+                    if (time - info.lastMoveTime <= 1200) continue;
 
                     info.lastMoveTime = time;
 
@@ -396,12 +901,12 @@
                             comboMultiplier = 1;
                             comboContainer.style.transform = 'scale(1)';
                         }
-                        
+
                         lastEatenTime = time;
                         score += info.prey.baseValue * comboMultiplier;
                         scoreEl.textContent = score;
                         comboEl.textContent = comboMultiplier;
-                        
+
                         if (score >= 1000) {
                             gameOver = true;
                             winScreen.style.display = 'flex';
@@ -414,15 +919,90 @@
             });
 
             // ──────────────────────────────────
-            // 9. COLLISION – sticking (O(1) lookup)
+            // 9. COLLISION – sticking + shark chop
             // ──────────────────────────────────
+            const triggerGameOver = (chopIndex) => {
+                if (gameOver) return;
+                gameOver = true;
+
+                SFX.playChompSnap();
+
+                // Flip world gravity to make things fall down dramatically
+                world.gravity.y = 0.8;
+
+                // Sever only the joint connecting the hit segment to the rest of the tentacle
+                const allConstraints = Composite.allConstraints(world);
+                for (let c = allConstraints.length - 1; c >= 0; c--) {
+                    const con = allConstraints[c];
+
+                    // Check if this constraint connects the severed part (0 to chopIndex) 
+                    // to the anchored part (chopIndex + 1 to end)
+                    if (con.bodyA && con.bodyB) {
+                        const idxA = tentacleBodyIndexMap.get(con.bodyA.id);
+                        const idxB = tentacleBodyIndexMap.get(con.bodyB.id);
+
+                        if (idxA !== undefined && idxB !== undefined) {
+                            // If it bridges the cut point, remove it
+                            const minIdx = Math.min(idxA, idxB);
+                            const maxIdx = Math.max(idxA, idxB);
+                            if (minIdx <= chopIndex && maxIdx > chopIndex) {
+                                Composite.remove(world, con, true);
+                            }
+                        }
+                    }
+
+                    // Also check the world anchor constraint
+                    if (!con.bodyA && con.bodyB) {
+                        const idx = tentacleBodyIndexMap.get(con.bodyB.id);
+                        if (idx !== undefined && idx <= chopIndex) {
+                            Composite.remove(world, con, true);
+                        }
+                    }
+                }
+
+                // Release any stuck prey on the severed portion
+                for (const info of stuckPrey) {
+                    if (info.currentLink <= chopIndex) {
+                        Composite.remove(world, info.constraint, true);
+                    }
+                }
+                stuckPrey = [];
+
+                // Give the severed part a little horizontal kick
+                for (let s = 0; s <= chopIndex; s++) {
+                    const seg = tentacle.bodies[s];
+                    if (seg) {
+                        Body.setVelocity(seg, { x: (Math.random() - 0.5) * 10, y: 5 });
+                    }
+                }
+
+                // Show game-over
+                setTimeout(() => {
+                    gameoverScreen.style.display = 'flex';
+                }, 200);
+            };
+
             Matter.Events.on(engine, 'collisionStart', (event) => {
                 const pairs = event.pairs;
                 for (let i = 0; i < pairs.length; i++) {
                     const { bodyA, bodyB } = pairs[i];
                     const aIsTent = tentacleBodySet.has(bodyA.id);
                     const bIsTent = tentacleBodySet.has(bodyB.id);
-                    
+
+                    // --- SHARK vs TENTACLE ---
+                    const aIsShark = sharkBodySet.has(bodyA.id);
+                    const bIsShark = sharkBodySet.has(bodyB.id);
+
+                    if ((aIsTent && bIsShark) || (bIsTent && aIsShark)) {
+                        const tentacleBody = aIsTent ? bodyA : bodyB;
+                        const chopIdx = tentacleBodyIndexMap.get(tentacleBody.id);
+                        if (chopIdx !== undefined) {
+                            triggerGameOver(chopIdx);
+                        }
+                        continue; // skip prey logic for this pair
+                    }
+
+                    // --- PREY vs TENTACLE ---
                     const aIsPrey = bodyA.isPrey;
                     const bIsPrey = bodyB.isPrey;
 
@@ -432,23 +1012,26 @@
 
                         if (!preyBody.isStuck) {
                             preyBody.isStuck = true;
+                            // Turn into a sensor so it stops colliding with the tentacle (fixes the violent glitching)
+                            preyBody.isSensor = true;
+                            SFX.playSquelch();
                             const linkIndex = tentacleBodyIndexMap.get(tentacleBody.id);
-                            
+
                             const stickConstraint = Constraint.create({
                                 bodyA: preyBody,
                                 bodyB: tentacleBody,
                                 pointA: { x: 0, y: 0 },
                                 pointB: { x: 0, y: 0 },
-                                stiffness: 0.6,
+                                stiffness: 1.0, // Lock to center for sliding
                                 render: { visible: false }
                             });
-                            
+
                             Composite.add(world, stickConstraint);
-                            stuckPrey.push({ 
-                                prey: preyBody, 
-                                constraint: stickConstraint, 
-                                currentLink: linkIndex, 
-                                lastMoveTime: time || Common.now()
+                            stuckPrey.push({
+                                prey: preyBody,
+                                constraint: stickConstraint,
+                                currentLink: linkIndex,
+                                lastMoveTime: Common.now()
                             });
                         }
                     }
@@ -489,7 +1072,7 @@
                     render.canvas.height = newH;
                     render.options.width = newW;
                     render.options.height = newH;
-                    
+
                     // Update tentacle anchor
                     const anchorConstraint = world.constraints.find(
                         c => c.bodyB === tentacle.bodies[tentacle.bodies.length - 1] && !c.bodyA
@@ -502,4 +1085,5 @@
         }
     </script>
 </body>
+
 </html>

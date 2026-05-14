@@ -42,6 +42,43 @@
             /* GPU-composited layer for wobble */
         }
 
+        /* Scale head down on mobile */
+        body.is-mobile #octopus-head-container {
+            width: 180px;
+            height: 180px;
+            bottom: -40px;
+        }
+
+        body.is-mobile .eye {
+            width: 22px;
+            height: 22px;
+            top: 58px;
+            border-width: 2px;
+        }
+
+        body.is-mobile .eye-left {
+            left: 63px;
+        }
+
+        body.is-mobile .eye-right {
+            left: 96px;
+        }
+
+        body.is-mobile .pupil {
+            width: 10px;
+            height: 10px;
+        }
+
+        body.is-mobile #scoreboard {
+            font-size: 1rem;
+            top: 8px;
+            left: 8px;
+        }
+
+        body.is-mobile #combo-display {
+            font-size: 0.85rem;
+        }
+
         #octopus-head-img {
             width: 100%;
             height: 100%;
@@ -629,25 +666,34 @@
             // Re-calculate config based on current dimensions
             W = window.innerWidth;
             H = window.innerHeight;
-            const isMobile = W < 768;
+            // Detect mobile via user-agent OR small screen
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                          || (navigator.maxTouchPoints > 1 && W < 1024);
             const isPortrait = H > W;
 
-            // Reachability logic: Calculate links based on height
-            // We want the tentacle to reach slightly beyond the top of the screen
-            // Link height scales from 1.0 to 3.0, average is 2.0
-            const baseLinkHeight = isMobile ? 22 : 30;
-            const avgLinkHeight = baseLinkHeight * 2.0;
-            // Add extra links to ensure reachability in tall portrait screens
-            const neededLinks = Math.ceil(H / avgLinkHeight) + (isPortrait ? 4 : 2);
+            // Mark body so CSS rules apply
+            if (isMobile) {
+                document.body.classList.add('is-mobile');
+            } else {
+                document.body.classList.remove('is-mobile');
+            }
+
+            // Scale everything smaller on mobile so nothing is zoomed/oversized
+            const baseLinkHeight = isMobile ? 14 : 30;
+            const baseLinkWidth  = isMobile ? 38 : 80;
+            const avgLinkHeight  = baseLinkHeight * 2.0;
+            const neededLinks    = Math.ceil(H / avgLinkHeight) + (isPortrait ? 4 : 2);
 
             config = {
-                linkWidth: isMobile ? 60 : 80,
-                linkHeight: baseLinkHeight,
-                crabRadius: isMobile ? 25 : 35,
-                maxPrey: isMobile ? 8 : 12,       
+                linkWidth:     baseLinkWidth,
+                linkHeight:    baseLinkHeight,
+                crabRadius:    isMobile ? 14 : 35,
+                maxPrey:       isMobile ? 8  : 12,
                 tentacleLinks: neededLinks,
-                sharkRadius: isMobile ? 40 : 55,
-                maxSharks: isMobile ? 2 : 3
+                sharkRadius:   isMobile ? 28 : 55,
+                maxSharks:     isMobile ? 2  : 3,
+                // Safe Y zone for sharks: top 35% of screen (well above octopus head at bottom)
+                sharkMaxY:     isMobile ? H * 0.35 : H * 0.5
             };
 
             // Re-add boundaries
@@ -885,15 +931,28 @@
 
             setInterval(() => {
                 if (gameOver || sharkArray.length >= config.maxSharks) return;
-                const fromLeft = Math.random() > 0.5, sharkVisualW = W < 768 ? 180 : 240, sharkVisualH = W < 768 ? 120 : 160;
-                const startX = fromLeft ? -sharkVisualW : W + sharkVisualW, startY = Math.random() * (H * 0.4) + 50;
-                const speed = (Math.random() * 2 + 2) * (fromLeft ? 1 : -1), frames = fromLeft ? sharkFramesRight : sharkFramesLeft;
+                const isMob = document.body.classList.contains('is-mobile');
+                const sharkVisualW = isMob ? 120 : 240;
+                const sharkVisualH = isMob ? 80  : 160;
+                const fromLeft = Math.random() > 0.5;
+                const startX = fromLeft ? -sharkVisualW : W + sharkVisualW;
+                // Clamp spawn Y so sharks always stay in the safe upper zone, never near the octopus head
+                const startY = Math.random() * (config.sharkMaxY - sharkVisualH) + sharkVisualH;
+                const speed = (Math.random() * 2 + 2) * (fromLeft ? 1 : -1);
+                const frames = fromLeft ? sharkFramesRight : sharkFramesLeft;
                 const sharkBody = Bodies.rectangle(startX, startY, sharkVisualW * 0.65, sharkVisualH * 0.5, {
-                    isSensor: true, frictionAir: 0, render: { sprite: { texture: frames[0], xScale: sharkVisualW / (assets.sharkOpen.width || 120), yScale: sharkVisualH / (assets.sharkOpen.height || 80) } }
+                    isSensor: true, frictionAir: 0,
+                    render: { sprite: { texture: frames[0],
+                        xScale: sharkVisualW / (assets.sharkOpen.width || 120),
+                        yScale: sharkVisualH / (assets.sharkOpen.height || 80)
+                    }}
                 });
-                sharkBody.isShark = true; sharkBody.sharkSpeed = speed; sharkBody.baseScaleX = sharkVisualW / (assets.sharkOpen.width || 120);
-                sharkBody.baseScaleY = sharkVisualH / (assets.sharkOpen.height || 80); sharkBody.animFrame = 0; sharkBody.sharkFrames = frames;
-                Body.setInertia(sharkBody, Infinity); sharkArray.push(sharkBody); sharkBodySet.add(sharkBody.id); Composite.add(world, sharkBody);
+                sharkBody.isShark = true; sharkBody.sharkSpeed = speed;
+                sharkBody.baseScaleX = sharkVisualW / (assets.sharkOpen.width || 120);
+                sharkBody.baseScaleY = sharkVisualH / (assets.sharkOpen.height || 80);
+                sharkBody.animFrame = 0; sharkBody.sharkFrames = frames;
+                Body.setInertia(sharkBody, Infinity);
+                sharkArray.push(sharkBody); sharkBodySet.add(sharkBody.id); Composite.add(world, sharkBody);
             }, 4000);
 
             // Resize handler

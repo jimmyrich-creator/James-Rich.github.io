@@ -49,31 +49,31 @@
             /* GPU-composited layer for wobble */
         }
 
-        /* Scale head on mobile - doubled as requested */
+        /* Scale head on mobile - doubled again as requested */
         body.is-mobile #octopus-head-container {
-            width: 360px;
-            height: 360px;
-            bottom: -75px;
+            width: 720px;
+            height: 720px;
+            bottom: -150px;
         }
 
         body.is-mobile .eye {
-            width: 44px;
-            height: 44px;
-            top: 115px;
-            border-width: 4px;
+            width: 88px;
+            height: 88px;
+            top: 230px;
+            border-width: 8px;
         }
 
         body.is-mobile .eye-left {
-            left: 125px;
+            left: 250px;
         }
 
         body.is-mobile .eye-right {
-            left: 192px;
+            left: 384px;
         }
 
         body.is-mobile .pupil {
-            width: 20px;
-            height: 20px;
+            width: 40px;
+            height: 40px;
         }
 
         body.is-mobile #scoreboard {
@@ -571,7 +571,9 @@
             mouse = Mouse.create(render.canvas);
             mouseConstraint = MouseConstraint.create(engine, {
                 mouse: mouse,
-                constraint: { stiffness: 0.1, render: { visible: false } }
+                constraint: { stiffness: 0.1, render: { visible: false } },
+                // Only allow interaction with bodies in category 0x0002 (the tentacle)
+                collisionFilter: { mask: 0x0002 }
             });
             // We'll add mouseConstraint in resetGame where it clears the world
             render.mouse = mouse;
@@ -703,7 +705,10 @@
                 const w = config.linkWidth * scale;
                 const h = config.linkHeight * scale;
                 const body = Bodies.rectangle(centerX, currentY, w, h, {
-                    collisionFilter: { group: tentacleGroup },
+                    collisionFilter: { 
+                        group: tentacleGroup,
+                        category: 0x0002 // Set specific category for interactivity
+                    },
                     chamfer: 5,
                     density: 0.005,
                     frictionAir: 0.05,

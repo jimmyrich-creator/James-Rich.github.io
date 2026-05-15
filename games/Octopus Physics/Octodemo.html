@@ -86,31 +86,6 @@
             font-size: 0.85rem;
         }
 
-        /* Landscape specific mobile adjustments */
-        body.is-mobile.is-landscape #octopus-head-container {
-            width: 120px;
-            height: 120px;
-            bottom: -35px;
-        }
-
-        body.is-mobile.is-landscape .eye {
-            width: 15px;
-            height: 15px;
-            top: 40px;
-        }
-
-        body.is-mobile.is-landscape .eye-left {
-            left: 42px;
-        }
-
-        body.is-mobile.is-landscape .eye-right {
-            left: 63px;
-        }
-
-        body.is-mobile.is-landscape #scoreboard {
-            font-size: 0.8rem;
-        }
-
         #octopus-head-img {
             width: 100%;
             height: 100%;
@@ -202,10 +177,17 @@
             background-position: center;
         }
 
-        #start-screen h1 {
-            font-size: 8rem;
-            margin-bottom: 20px;
-            color: #ffcc00;
+        #game-logo {
+            max-width: min(500px, 90%);
+            height: auto;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
+            animation: logo-float 4s ease-in-out infinite;
+        }
+
+        @keyframes logo-float {
+            0%, 100% { transform: translateY(0) rotate(-1deg); }
+            50% { transform: translateY(-20px) rotate(1deg); }
         }
 
         .start-btn {
@@ -275,58 +257,11 @@
             top: 0;
             left: 0;
         }
-
-        }
-
-        #rotate-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #0d1117;
-            color: white;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            text-align: center;
-            padding: 20px;
-        }
-
-        #rotate-overlay h2 {
-            font-size: 2.5rem;
-            color: #ffcc00;
-            margin-bottom: 20px;
-        }
-
-        #rotate-overlay .icon {
-            width: 100px;
-            height: 100px;
-            border: 4px solid white;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            animation: rotate-phone 2s infinite ease-in-out;
-        }
-
-        @keyframes rotate-phone {
-            0% { transform: rotate(0deg); }
-            50% { transform: rotate(90deg); }
-            100% { transform: rotate(90deg); }
-        }
-
-        }
     </style>
 </head>
 
 <body>
 
-    <div id="rotate-overlay">
-        <div class="icon"></div>
-        <h2>Please Rotate Your Device</h2>
-        <p>This game is best played in Landscape mode.</p>
-    </div>
     <div id="canvas-container"></div>
     <div id="octopus-head-container">
         <img id="octopus-head-img" src="octopus_head.png" alt="Octopus Boss">
@@ -354,7 +289,7 @@
     </div>
 
     <div id="start-screen" class="end-screen">
-        <h1>OCTOPUS FEAST</h1>
+        <img id="game-logo" src="grab_a_crab_logo.png" alt="Grab a Crab Logo">
         <p>Catch shellfish, avoid sharks!</p>
         <button id="play-btn" class="retry-btn start-btn">PLAY</button>
     </div>
@@ -641,6 +576,8 @@
             // First time setup
             resetGame(true);
 
+            let runnerStarted = false;
+
             // Play button
             document.getElementById('play-btn').addEventListener('click', async () => {
                 // Request fullscreen first (required by many mobile browsers before locking orientation)
@@ -657,21 +594,15 @@
                     console.log("Fullscreen request failed:", e);
                 }
 
-                // Attempt to lock orientation
-                if (screen.orientation && screen.orientation.lock) {
-                    try {
-                        await screen.orientation.lock('landscape');
-                    } catch (e) {
-                        console.log("Orientation lock failed:", e);
-                    }
-                }
-
                 SFX.init();
                 SFX.playMusic();
                 startScreen.style.display = 'none';
                 
-                // Start the physics runner once
-                Runner.run(runner, engine);
+                // Start the physics runner only once
+                if (!runnerStarted) {
+                    runnerStarted = true;
+                    Runner.run(runner, engine);
+                }
             });
         }
 
@@ -701,12 +632,9 @@
             // Detect mobile via user-agent OR small screen
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
                           || (navigator.maxTouchPoints > 1 && (W < 1024 || H < 600));
-            const isPortrait = H > W;
 
             // Mark body so CSS rules apply
             document.body.classList.toggle('is-mobile', isMobile);
-            document.body.classList.toggle('is-portrait', isPortrait);
-            document.body.classList.toggle('is-landscape', !isPortrait);
 
             scoreEl.textContent = '0';
             comboEl.textContent = '1';
@@ -727,22 +655,22 @@
             W = document.documentElement.clientWidth;
             H = document.documentElement.clientHeight;
             
-            // Drastically scale down for mobile landscape
-            const baseLinkHeight = isMobile ? (isPortrait ? 14 : 6) : 30;
-            const baseLinkWidth  = isMobile ? (isPortrait ? 38 : 18) : 80;
+            // Scale down for mobile portrait
+            const baseLinkHeight = isMobile ? 18 : 30;
+            const baseLinkWidth  = isMobile ? 48 : 80;
             const avgLinkHeight  = baseLinkHeight * 2.0;
-            const neededLinks    = Math.ceil(H / avgLinkHeight) + (isPortrait ? 4 : 1);
+            const neededLinks    = Math.ceil(H / avgLinkHeight) + (isMobile ? 4 : 1);
 
             config = {
                 linkWidth:     baseLinkWidth,
                 linkHeight:    baseLinkHeight,
-                crabRadius:    isMobile ? (isPortrait ? 12 : 8) : 35,
+                crabRadius:    isMobile ? 18 : 35,
                 maxPrey:       isMobile ? 8  : 12,
                 tentacleLinks: neededLinks,
-                sharkRadius:   isMobile ? (isPortrait ? 22 : 14) : 55,
+                sharkRadius:   isMobile ? 26 : 55,
                 maxSharks:     isMobile ? 2  : 3,
-                // Safe Y zone for sharks: top 18% in landscape
-                sharkMaxY:     isMobile ? (isPortrait ? H * 0.35 : H * 0.18) : H * 0.5
+                // Safe Y zone for sharks
+                sharkMaxY:     isMobile ? H * 0.4 : H * 0.5
             };
 
             // Re-add boundaries
@@ -813,25 +741,7 @@
             console.log("Game reset complete. links:", neededLinks);
         }
 
-        function checkOrientation() {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0);
-            const isPortrait = window.innerHeight > window.innerWidth;
-            const rotateOverlay = document.getElementById('rotate-overlay');
-            
-            document.body.classList.toggle('is-portrait', isPortrait);
-            document.body.classList.toggle('is-landscape', !isPortrait);
-
-            if (isMobile && isPortrait) {
-                rotateOverlay.style.display = 'flex';
-            } else {
-                rotateOverlay.style.display = 'none';
-            }
-        }
-
         function setupEventListeners() {
-            // Check orientation on load
-            checkOrientation();
-
             let lastWobbleTime = 0;
             Matter.Events.on(engine, 'beforeUpdate', () => {
                 const time = Common.now();
@@ -984,9 +894,8 @@
             setInterval(() => {
                 if (gameOver || sharkArray.length >= config.maxSharks) return;
                 const isMob = document.body.classList.contains('is-mobile');
-                const isPort = window.innerHeight > window.innerWidth;
-                const sharkVisualW = isMob ? (isPort ? 120 : 100) : 240;
-                const sharkVisualH = isMob ? (isPort ? 80 : 65) : 160;
+                const sharkVisualW = isMob ? 130 : 240;
+                const sharkVisualH = isMob ? 85 : 160;
                 const fromLeft = Math.random() > 0.5;
                 const startX = fromLeft ? -sharkVisualW : W + sharkVisualW;
                 // Clamp spawn Y so sharks always stay in the safe upper zone
@@ -1019,8 +928,7 @@
                     render.canvas.width = newW; render.canvas.height = newH;
                     render.options.width = newW; render.options.height = newH;
                     
-                    // Full reset on major resize/orientation change to recalculate tentacle links
-                    checkOrientation();
+                    // Full reset on major resize change to recalculate tentacle links
                     resetGame();
                 }, 200);
             });

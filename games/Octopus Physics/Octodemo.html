@@ -651,9 +651,9 @@
             }
             world.gravity.y = -0.4;
 
-            // Use clientWidth/Height for more stability on mobile
-            W = document.documentElement.clientWidth;
-            H = document.documentElement.clientHeight;
+            // Use window.innerWidth for better alignment with CSS 'left: 50%'
+            W = window.innerWidth;
+            H = window.innerHeight;
             
             // Scale down for mobile portrait
             const baseLinkHeight = isMobile ? 18 : 30;
@@ -669,8 +669,8 @@
                 tentacleLinks: neededLinks,
                 sharkRadius:   isMobile ? 26 : 55,
                 maxSharks:     isMobile ? 2  : 3,
-                // Safe Y zone for sharks
-                sharkMaxY:     isMobile ? H * 0.4 : H * 0.5
+                // Safe Y zone for sharks - kept high in portrait
+                sharkMaxY:     isMobile ? H * 0.25 : H * 0.5
             };
 
             // Re-add boundaries
@@ -900,7 +900,7 @@
                 const startX = fromLeft ? -sharkVisualW : W + sharkVisualW;
                 // Clamp spawn Y so sharks always stay in the safe upper zone
                 const startY = Math.random() * (config.sharkMaxY - sharkVisualH) + (sharkVisualH / 2) + 20;
-                const speed = (Math.random() * 2 + 2) * (fromLeft ? 1 : -1);
+                const speed = (Math.random() * 1.0 + 1.2) * (fromLeft ? 1 : -1);
                 const frames = fromLeft ? sharkFramesRight : sharkFramesLeft;
                 const sharkBody = Bodies.rectangle(startX, startY, sharkVisualW * 0.65, sharkVisualH * 0.5, {
                     isSensor: true, frictionAir: 0,

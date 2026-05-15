@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Grab a Crab – Octopus Physics</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
@@ -11,7 +12,8 @@
             box-sizing: border-box;
         }
 
-        html, body {
+        html,
+        body {
             margin: 0;
             padding: 0;
             width: 100vw;
@@ -51,8 +53,8 @@
 
         /* Scale head on mobile - doubled again as requested */
         body.is-mobile #octopus-head-container {
-            width: 720px;
-            height: 720px;
+            width: 520px;
+            height: 520px;
             bottom: -150px;
         }
 
@@ -181,13 +183,20 @@
             max-width: min(500px, 90%);
             height: auto;
             margin-bottom: 10px;
-            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
+            filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.6));
             animation: logo-float 4s ease-in-out infinite;
         }
 
         @keyframes logo-float {
-            0%, 100% { transform: translateY(0) rotate(-1deg); }
-            50% { transform: translateY(-20px) rotate(1deg); }
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(-1deg);
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(1deg);
+            }
         }
 
         .start-btn {
@@ -584,7 +593,7 @@
 
             // Event Listeners
             setupEventListeners();
-            
+
             // First time setup
             resetGame(true);
 
@@ -609,7 +618,7 @@
                 SFX.init();
                 SFX.playMusic();
                 startScreen.style.display = 'none';
-                
+
                 // Start the physics runner only once
                 if (!runnerStarted) {
                     runnerStarted = true;
@@ -628,11 +637,11 @@
             stuckPrey = [];
             sharkArray = [];
             sharkBodySet.clear();
-            
+
             // Re-calculate config based on current dimensions
             W = window.innerWidth || document.documentElement.clientWidth;
             H = window.innerHeight || document.documentElement.clientHeight;
-            
+
             // Sync canvas size precisely
             if (render && render.canvas) {
                 render.canvas.width = W;
@@ -640,10 +649,10 @@
                 render.options.width = W;
                 render.options.height = H;
             }
-            
+
             // Detect mobile via user-agent OR small screen
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-                          || (navigator.maxTouchPoints > 1 && (W < 1024 || H < 600));
+                || (navigator.maxTouchPoints > 1 && (W < 1024 || H < 600));
 
             // Mark body so CSS rules apply
             document.body.classList.toggle('is-mobile', isMobile);
@@ -666,23 +675,23 @@
             // Use window.innerWidth for better alignment with CSS 'left: 50%'
             W = window.innerWidth;
             H = window.innerHeight;
-            
+
             // Scale down for mobile portrait
             const baseLinkHeight = isMobile ? 18 : 30;
-            const baseLinkWidth  = isMobile ? 48 : 80;
-            const avgLinkHeight  = baseLinkHeight * 2.0;
-            const neededLinks    = Math.ceil(H / avgLinkHeight) + (isMobile ? 4 : 1);
+            const baseLinkWidth = isMobile ? 48 : 80;
+            const avgLinkHeight = baseLinkHeight * 2.0;
+            const neededLinks = Math.ceil(H / avgLinkHeight) + (isMobile ? 4 : 1);
 
             config = {
-                linkWidth:     baseLinkWidth,
-                linkHeight:    baseLinkHeight,
-                crabRadius:    isMobile ? 18 : 35,
-                maxPrey:       isMobile ? 8  : 12,
+                linkWidth: baseLinkWidth,
+                linkHeight: baseLinkHeight,
+                crabRadius: isMobile ? 18 : 35,
+                maxPrey: isMobile ? 8 : 12,
                 tentacleLinks: neededLinks,
-                sharkRadius:   isMobile ? 26 : 55,
-                maxSharks:     isMobile ? 2  : 3,
+                sharkRadius: isMobile ? 26 : 55,
+                maxSharks: isMobile ? 2 : 3,
                 // Safe Y zone for sharks - kept high in portrait
-                sharkMaxY:     isMobile ? H * 0.25 : H * 0.5
+                sharkMaxY: isMobile ? H * 0.25 : H * 0.5
             };
 
             // Re-add boundaries
@@ -697,7 +706,7 @@
             const tentacleGroup = Body.nextGroup(true);
             const centerX = window.innerWidth / 2;
             const bottomY = window.innerHeight;
-            
+
             const bodies = [];
             let currentY = bottomY;
             for (let i = 0; i < config.tentacleLinks; i++) {
@@ -705,7 +714,7 @@
                 const w = config.linkWidth * scale;
                 const h = config.linkHeight * scale;
                 const body = Bodies.rectangle(centerX, currentY, w, h, {
-                    collisionFilter: { 
+                    collisionFilter: {
                         group: tentacleGroup,
                         category: 0x0002 // Set specific category for interactivity
                     },
@@ -919,10 +928,13 @@
                 const frames = fromLeft ? sharkFramesRight : sharkFramesLeft;
                 const sharkBody = Bodies.rectangle(startX, startY, sharkVisualW * 0.65, sharkVisualH * 0.5, {
                     isSensor: true, frictionAir: 0,
-                    render: { sprite: { texture: frames[0],
-                        xScale: sharkVisualW / (assets.sharkOpen.width || 120),
-                        yScale: sharkVisualH / (assets.sharkOpen.height || 80)
-                    }}
+                    render: {
+                        sprite: {
+                            texture: frames[0],
+                            xScale: sharkVisualW / (assets.sharkOpen.width || 120),
+                            yScale: sharkVisualH / (assets.sharkOpen.height || 80)
+                        }
+                    }
                 });
                 sharkBody.isShark = true; sharkBody.sharkSpeed = speed;
                 sharkBody.baseScaleX = sharkVisualW / (assets.sharkOpen.width || 120);
@@ -939,10 +951,10 @@
                 resizeTimer = setTimeout(() => {
                     const newW = window.innerWidth, newH = window.innerHeight;
                     if (Math.abs(newW - W) < 50 && Math.abs(newH - H) < 50) return; // Ignore small mobile browser bar jumps
-                    
+
                     render.canvas.width = newW; render.canvas.height = newH;
                     render.options.width = newW; render.options.height = newH;
-                    
+
                     // Full reset on major resize change to recalculate tentacle links
                     resetGame();
                 }, 200);

@@ -454,6 +454,15 @@
             display: flex;
             justify-content: center;
         }
+
+        .resume-btn {
+            background: linear-gradient(135deg, #00bbff, #00ff88);
+            box-shadow: 0 6px 20px rgba(0, 187, 255, 0.4);
+        }
+
+        .resume-btn:hover {
+            box-shadow: 0 8px 30px rgba(0, 187, 255, 0.6);
+        }
     </style>
 </head>
 
@@ -486,6 +495,12 @@
         <h1>GAME OVER</h1>
         <p>A shark chomped your tentacle!</p>
         <button class="retry-btn" onclick="resetGame()">Retry</button>
+    </div>
+
+    <div id="pause-screen" class="end-screen">
+        <h1 style="color: #00bbff; text-shadow: 4px 4px 0 #000;">GAME PAUSED</h1>
+        <p id="pause-reason">Are you still there?</p>
+        <button class="retry-btn resume-btn" onclick="resumeGame()">Resume</button>
     </div>
 
     <div id="start-screen" class="end-screen">
@@ -674,7 +689,19 @@
                 osc2.stop(now + 0.12);
             };
 
-            return { init, playSquelch, playChompSnap, playMusic, playEat };
+            const suspend = () => {
+                if (audioCtx && audioCtx.state !== 'suspended') {
+                    audioCtx.suspend();
+                }
+            };
+
+            const resume = () => {
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            };
+
+            return { init, playSquelch, playChompSnap, playMusic, playEat, suspend, resume };
         })();
 
         // ──────────────────────────────────
@@ -1001,7 +1028,7 @@
         let engine, render, runner, world;
         let tentacle, tentacleBodySet, tentacleBodyIndexMap;
         let preyArray = [], stuckPrey = [], sharkArray = [], sharkBodySet = new Set();
-        let score = 0, comboMultiplier = 1, lastEatenTime = 0, gameOver = false;
+        let score = 0, comboMultiplier = 1, lastEatenTime = 0, gameOver = false, gamePaused = false;
         let W, H, config;
         let headBody; // static sensory collision box for octopus head
         let isMobile = false;
@@ -1011,6 +1038,8 @@
         const comboContainer = document.getElementById('combo-display');
         const winScreen = document.getElementById('win-screen');
         const gameoverScreen = document.getElementById('gameover-screen');
+        const pauseScreen = document.getElementById('pause-screen');
+        const pauseReasonEl = document.getElementById('pause-reason');
         const startScreen = document.getElementById('start-screen');
         const headContainer = document.getElementById('octopus-head-container');
         const pupils = document.querySelectorAll('.pupil');
@@ -1018,6 +1047,54 @@
         let mouse, mouseConstraint;
 
         let sharkFramesRight = [], sharkFramesLeft = [];
+
+        // Pause / Resume Logic
+        function pauseGame(reason) {
+            if (gameOver || gamePaused) return;
+            if (startScreen.style.display !== 'none') return;
+
+            gamePaused = true;
+
+            if (runner) {
+                Runner.stop(runner);
+            }
+            SFX.suspend();
+
+            if (reason === 'inactive') {
+                pauseReasonEl.textContent = "Game paused due to inactivity.";
+            } else if (reason === 'hidden') {
+                pauseReasonEl.textContent = "Game paused because the tab was minimized or hidden.";
+            } else {
+                pauseReasonEl.textContent = "Game paused.";
+            }
+
+            pauseScreen.style.display = 'flex';
+        }
+
+        function resumeGame() {
+            if (!gamePaused) return;
+
+            gamePaused = false;
+            resetIdleTimer();
+
+            if (runner && engine) {
+                Runner.run(runner, engine);
+            }
+            SFX.resume();
+
+            pauseScreen.style.display = 'none';
+        }
+
+        // Idle timer variables
+        let idleTime = 0;
+        const IDLE_LIMIT = 90; // 90 seconds of inactivity
+        
+        function resetIdleTimer() {
+            idleTime = 0;
+        }
+
+        // Export to window for onclick handlers
+        window.resumeGame = resumeGame;
 
         // ──────────────────────────────────
         // 3. MAIN INIT
@@ -1049,14 +1126,19 @@
 
             // Prepare shark frames once
             function flipImageToDataURL(img) {
-                const c = document.createElement('canvas');
-                c.width = img.width;
-                c.height = img.height;
-                const ctx = c.getContext('2d');
-                ctx.translate(c.width, 0);
-                ctx.scale(-1, 1);
-                ctx.drawImage(img, 0, 0);
-                return c.toDataURL('image/png');
+                try {
+                    const c = document.createElement('canvas');
+                    c.width = img.width;
+                    c.height = img.height;
+                    const ctx = c.getContext('2d');
+                    ctx.translate(c.width, 0);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(img, 0, 0);
+                    return c.toDataURL('image/png');
+                } catch (e) {
+                    console.warn("Canvas tainted (likely running via file:// protocol). Falling back to original image.", e);
+                    return img.src;
+                }
             }
             sharkFramesRight = [assets.sharkOpen.src, flipImageToDataURL(assets.sharkClosed)];
             sharkFramesLeft = [flipImageToDataURL(assets.sharkOpen), assets.sharkClosed.src];
@@ -1115,6 +1197,10 @@
         function resetGame(isFirstLoad = false) {
             // Reset state
             gameOver = false;
+            gamePaused = false;
+            if (pauseScreen) pauseScreen.style.display = 'none';
+            SFX.resume();
+            resetIdleTimer();
             score = 0;
             comboMultiplier = 1;
             lastEatenTime = 0;
@@ -1270,7 +1356,40 @@
 
         function setupEventListeners() {
             let lastWobbleTime = 0;
+            
+            // Add idle / pause listeners
+            window.addEventListener('mousemove', resetIdleTimer);
+            window.addEventListener('mousedown', resetIdleTimer);
+            window.addEventListener('touchstart', resetIdleTimer);
+            window.addEventListener('touchmove', resetIdleTimer);
+            window.addEventListener('keydown', resetIdleTimer);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    pauseGame('hidden');
+                }
+            });
+
+            window.addEventListener('pagehide', () => {
+                pauseGame('hidden');
+            });
+
+            window.addEventListener('blur', () => {
+                pauseGame('hidden');
+            });
+
+            // Periodically check for inactivity
+            setInterval(() => {
+                if (gameOver || gamePaused || startScreen.style.display !== 'none') return;
+                idleTime++;
+                const limit = isMobile ? 60 : 90; // 60 seconds on mobile, 90 seconds on desktop
+                if (idleTime >= limit) {
+                    pauseGame('inactive');
+                }
+            }, 1000);
+
             Matter.Events.on(engine, 'beforeUpdate', () => {
+                if (gamePaused) return;
                 const time = Common.now();
                 const doWobble = (time - lastWobbleTime > 150);
                 if (doWobble) lastWobbleTime = time;
@@ -1425,7 +1544,7 @@
 
             // Spawning timers
             setInterval(() => {
-                if (gameOver || preyArray.length > config.maxPrey) return;
+                if (gameOver || gamePaused || preyArray.length > config.maxPrey) return;
                 const xPos = Math.random() * (W - 100) + 50;
                 const isLobster = Math.random() > 0.5;
                 let asset;
@@ -1462,7 +1581,7 @@
             }, 2500);
 
             setInterval(() => {
-                if (gameOver || sharkArray.length >= config.maxSharks) return;
+                if (gameOver || gamePaused || sharkArray.length >= config.maxSharks) return;
                 const isMob = document.body.classList.contains('is-mobile');
                 const sharkVisualW = isMob ? 130 : 240;
                 const sharkVisualH = isMob ? 85 : 160;

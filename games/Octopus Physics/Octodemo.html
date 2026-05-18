@@ -130,7 +130,7 @@
         }
 
         .eating-active {
-            animation: chomp 0.52s cubic-bezier(0.25, 1, 0.2, 1.1) forwards;
+            animation: chomp 2.0s cubic-bezier(0.25, 1, 0.2, 1.1) forwards;
         }
 
         /* Scale up and dilate eyeballs when eating */
@@ -146,6 +146,125 @@
             z-index: 150;
             will-change: transform, opacity;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .mouth {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%) scale(0.1);
+            width: 52px;
+            height: 26px;
+            background-color: #220808; /* dark mouth interior */
+            border: 3px solid #e17055; /* clay pink lips matching color palette */
+            border-radius: 50% / 20% 20% 80% 80%; /* expressive clay smile shape when open */
+            top: 180px;
+            opacity: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.6);
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* White clay teeth inside the mouth */
+        .mouth::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 42px;
+            height: 8px;
+            background: linear-gradient(to right, 
+                white 0px, white 6px, 
+                transparent 6px, transparent 10px, 
+                white 10px, white 16px, 
+                transparent 16px, transparent 20px, 
+                white 20px, white 26px,
+                transparent 26px, transparent 30px,
+                white 30px, white 36px
+            );
+            border-radius: 0 0 4px 4px;
+        }
+
+        /* Mobile scaling overrides */
+        body.is-mobile .mouth {
+            width: 72px;
+            height: 36px;
+            top: 250px;
+            border-width: 4px;
+        }
+        
+        body.is-mobile .mouth::before {
+            width: 58px;
+            height: 11px;
+            background: linear-gradient(to right, 
+                white 0px, white 8px, 
+                transparent 8px, transparent 13px, 
+                white 13px, white 21px, 
+                transparent 21px, transparent 26px, 
+                white 26px, white 34px,
+                transparent 34px, transparent 39px,
+                white 39px, white 47px
+            );
+        }
+
+        @keyframes mouth-crunch {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) scale(0.1);
+            }
+            10% {
+                opacity: 1;
+                transform: translateX(-50%) scale(1.1) scaleY(1.4);
+            }
+            25% {
+                transform: translateX(-50%) scale(1) scaleY(0.2); /* Crunch closed */
+            }
+            40% {
+                transform: translateX(-50%) scale(1.1) scaleY(1.4); /* Crunch open */
+            }
+            55% {
+                transform: translateX(-50%) scale(1) scaleY(0.2); /* Crunch closed */
+            }
+            70% {
+                transform: translateX(-50%) scale(1.1) scaleY(1.4); /* Crunch open */
+            }
+            85% {
+                transform: translateX(-50%) scale(1) scaleY(0.4); /* Crunch closed */
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(-50%) scale(0.1);
+            }
+        }
+
+        .mouth.crunching-active {
+            animation: mouth-crunch 2.0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .floating-score {
+            position: fixed;
+            pointer-events: none;
+            z-index: 160;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-weight: 900;
+            border-radius: 50%;
+            border: 2px solid;
+            will-change: transform, opacity;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            transition: opacity 0.1s;
+        }
+
+        .pop-droplet {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 155;
+            will-change: transform, opacity;
         }
 
         .eye {
@@ -344,6 +463,7 @@
     <div id="octopus-head-container">
         <div id="octopus-head-inner">
             <img id="octopus-head-img" src="octopus_head.png" alt="Octopus Boss">
+            <div class="mouth"></div>
             <div class="eye eye-left">
                 <div class="pupil"></div>
             </div>
@@ -569,7 +689,15 @@
                 
                 setTimeout(() => {
                     headInner.classList.remove('eating-active');
-                }, 550);
+                }, 2000);
+            }
+            
+            // Trigger mouth eating/crunching animation (opens/closes for 1 second)
+            const mouth = document.querySelector('.mouth');
+            if (mouth) {
+                mouth.classList.remove('crunching-active');
+                void mouth.offsetWidth; // Trigger reflow
+                mouth.classList.add('crunching-active');
             }
             
             SFX.playEat();
@@ -624,6 +752,139 @@
             }
         }
 
+        function triggerPopEffect(x, y, color) {
+            const popCount = 6;
+            for (let i = 0; i < popCount; i++) {
+                const popPart = document.createElement('div');
+                popPart.className = 'pop-droplet';
+                popPart.style.backgroundColor = color;
+                
+                const size = Math.random() * 4 + 3;
+                popPart.style.width = `${size}px`;
+                popPart.style.height = `${size}px`;
+                popPart.style.left = `${x}px`;
+                popPart.style.top = `${y}px`;
+                
+                document.body.appendChild(popPart);
+                
+                const angle = (i / popCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+                const speed = Math.random() * 2 + 1.5;
+                const vx = Math.cos(angle) * speed;
+                const vy = Math.sin(angle) * speed;
+                
+                let px = x;
+                let py = y;
+                
+                const start = performance.now();
+                const duration = 200;
+                
+                function updatePop(timestamp) {
+                    const elapsed = timestamp - start;
+                    if (elapsed >= duration) {
+                        popPart.remove();
+                        return;
+                    }
+                    
+                    const progress = elapsed / duration;
+                    px += vx;
+                    py += vy;
+                    
+                    popPart.style.transform = `translate(${px - x}px, ${py - y}px) scale(${1 - progress})`;
+                    popPart.style.opacity = 1 - progress;
+                    
+                    requestAnimationFrame(updatePop);
+                }
+                requestAnimationFrame(updatePop);
+            }
+        }
+
+        function spawnFloatingScore(points, preyType) {
+            const mouthX = window.innerWidth / 2 + (Math.random() - 0.5) * 40; // slight random spread
+            const mouthY = window.innerHeight - (document.body.classList.contains('is-mobile') ? 145 : 105);
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'floating-score';
+            bubble.textContent = `+${points}`;
+            
+            // Sizing and coloring based on point values
+            let size = 45;
+            let fontSize = 14;
+            let bubbleColor = 'rgba(255, 255, 255, 0.18)';
+            let borderColor = 'rgba(255, 255, 255, 0.6)';
+            let textColor = '#ffffff';
+            let glowColor = 'rgba(255, 255, 255, 0.3)';
+            
+            if (points >= 50 && points < 150) {
+                size = 60;
+                fontSize = 18;
+                bubbleColor = 'rgba(255, 204, 0, 0.12)';
+                borderColor = 'rgba(255, 204, 0, 0.7)';
+                textColor = '#ffdd44';
+                glowColor = 'rgba(255, 204, 0, 0.4)';
+            } else if (points >= 150) {
+                size = 75;
+                fontSize = 22;
+                bubbleColor = 'rgba(255, 0, 128, 0.15)';
+                borderColor = 'rgba(255, 0, 128, 0.8)';
+                textColor = '#ff3388';
+                glowColor = 'rgba(255, 0, 128, 0.5)';
+            }
+            
+            bubble.style.width = `${size}px`;
+            bubble.style.height = `${size}px`;
+            bubble.style.fontSize = `${fontSize}px`;
+            bubble.style.backgroundColor = bubbleColor;
+            bubble.style.borderColor = borderColor;
+            bubble.style.color = textColor;
+            bubble.style.boxShadow = `inset 0 0 8px rgba(255, 255, 255, 0.4), 0 0 12px ${glowColor}`;
+            bubble.style.left = `${mouthX - size / 2}px`;
+            bubble.style.top = `${mouthY - size / 2}px`;
+            
+            document.body.appendChild(bubble);
+            
+            // Animate: floats up, wobbles side-to-side, and pops at the end!
+            const start = performance.now();
+            const duration = 1200; // 1.2 seconds life
+            const amplitude = Math.random() * 15 + 10; // horizontal wobble width
+            const wobbleSpeed = Math.random() * 0.015 + 0.01;
+            
+            let py = mouthY - size / 2;
+            let px = mouthX - size / 2;
+            
+            function updateBubble(timestamp) {
+                const elapsed = timestamp - start;
+                if (elapsed >= duration) {
+                    // Trigger POP!
+                    triggerPopEffect(px + size / 2, py + size / 2, borderColor);
+                    bubble.remove();
+                    return;
+                }
+                
+                const progress = elapsed / duration;
+                
+                // Float up (fast at first, then slows down slightly)
+                const floatDistance = Math.pow(progress, 0.8) * 180;
+                const currentY = py - floatDistance;
+                
+                // Horizontal sine-wave wobble
+                const currentX = px + Math.sin(elapsed * wobbleSpeed) * amplitude * (1 - progress * 0.5);
+                
+                // Fade out at the end
+                let opacity = 1;
+                if (progress > 0.75) {
+                    opacity = 1 - (progress - 0.75) / 0.25;
+                }
+                
+                // Combine floats and slight rotation
+                bubble.style.transform = `translate(${currentX - px}px, ${currentY - py}px) rotate(${Math.sin(elapsed * 0.005) * 8}deg)`;
+                bubble.style.opacity = opacity;
+                
+                requestAnimationFrame(updateBubble);
+            }
+            
+            requestAnimationFrame(updateBubble);
+        }
+
         function eatStuckPreyImmediately(preyBody) {
             const idx = stuckPrey.findIndex(info => info.prey === preyBody);
             if (idx !== -1) {
@@ -649,9 +910,15 @@
                     comboContainer.style.transform = 'scale(1)';
                 }
                 lastEatenTime = time;
-                score += info.prey.baseValue * comboMultiplier;
+                
+                const pointsGained = info.prey.baseValue * comboMultiplier;
+                score += pointsGained;
                 scoreEl.textContent = score;
                 comboEl.textContent = comboMultiplier;
+                
+                // Spawn floating bubble score pop!
+                spawnFloatingScore(pointsGained, info.prey.preyType);
+                
                 if (score >= 1000) {
                     gameOver = true;
                     winScreen.style.display = 'flex';

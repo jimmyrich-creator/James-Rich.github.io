@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lobster Assets Transparency Test</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #ffffff;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 40px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        .card {
+            background-color: #ff00ff; /* Bright magenta background to verify transparency */
+            border: 4px solid #ffffff;
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            width: 260px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+        .card img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 6px;
+        }
+        .card-title {
+            margin-top: 10px;
+            font-weight: bold;
+            background: #000;
+            padding: 5px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Lobster Assets Transparency Verification</h1>
+    <p>All images below have a solid <strong>bright magenta (#ff00ff)</strong> CSS background color. If transparency is working correctly, the lobster assets will be rendered perfectly on a pure magenta backdrop with no grey/white checkered background.</p>
+    <div class="container">
+        <div class="card">
+            <img src="lobster_beanie_1.png" alt="Lobster Beanie 1">
+            <div class="card-title">lobster_beanie_1.png (Root)</div>
+        </div>
+        <div class="card">
+            <img src="lobster_scarf_1.png" alt="Lobster Scarf 1">
+            <div class="card-title">lobster_scarf_1.png (Root)</div>
+        </div>
+        <div class="card">
+            <img src="lobster_beanie_2.png" alt="Lobster Beanie 2">
+            <div class="card-title">lobster_beanie_2.png (Root)</div>
+        </div>
+        <div class="card">
+            <img src="lobster_scarf_2.png" alt="Lobster Scarf 2">
+            <div class="card-title">lobster_scarf_2.png (Root)</div>
+        </div>
+    </div>
+</body>
+</html>

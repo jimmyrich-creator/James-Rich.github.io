@@ -1193,7 +1193,7 @@
             // Add static sensor collision box for octopus head & body
             const headW = isMobile ? 520 : 375;
             const headH = isMobile ? 520 : 375;
-            const headOffset = isMobile ? 150 : 100;
+            const headOffset = isMobile ? 40 : 100; // Shifted up on mobile for responsive drag-to-eat
             const headX = W / 2;
             const headY = H - headH / 2 + headOffset;
 
@@ -1354,10 +1354,10 @@
                 if (headBody) {
                     const headW = isMobile ? 520 : 375;
                     const headH = isMobile ? 520 : 375;
-                    const headOffset = isMobile ? 150 : 100;
+                    const headOffset = isMobile ? 40 : 100; // Shifted up on mobile for responsive drag-to-eat
                     const headX = W / 2;
                     const headY = H - headH / 2 + headOffset;
-                    const eatThreshold = isMobile ? 240 : 170;
+                    const eatThreshold = isMobile ? 260 : 170; // Expanded on mobile to cover just under head size
 
                     for (let i = stuckPrey.length - 1; i >= 0; i--) {
                         const info = stuckPrey[i];

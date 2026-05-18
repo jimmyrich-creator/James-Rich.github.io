@@ -730,7 +730,6 @@
 
     </style>
 </head>
-<body>
 
     <div class="instructions">
         Swipe screen or drag mouse to move head!<br>
@@ -887,12 +886,43 @@
     <script>
         const root = document.documentElement;
         
+        // --- Sound Effect: Bassy Thud on Change ---
+        let thudAudioCtx = null;
+        function playThud() {
+            try {
+                if (!thudAudioCtx) {
+                    thudAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (thudAudioCtx.state === 'suspended') {
+                    thudAudioCtx.resume();
+                }
+                const time = thudAudioCtx.currentTime;
+                const osc = thudAudioCtx.createOscillator();
+                const gain = thudAudioCtx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(95, time);
+                osc.frequency.exponentialRampToValueAtTime(15, time + 0.15);
+                
+                gain.gain.setValueAtTime(0.4, time);
+                gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+                
+                osc.connect(gain);
+                gain.connect(thudAudioCtx.destination);
+                
+                osc.start(time);
+                osc.stop(time + 0.15);
+            } catch (e) {
+                console.error("Audio thud failed", e);
+            }
+        }
+
+        // Trackers for 20 styles each
         let targetX = 0;
         let targetY = 0;
         let currentX = 0;
         let currentY = 0;
         
-        // Trackers for 20 styles each
         const totalHairStyles = 20;
         let currentHairStyle = 1;
 
@@ -907,16 +937,19 @@
 
         // --- UI Button Interactions ---
         function updateEyeStyle(direction) {
+            playThud();
             currentEyeIdx = (currentEyeIdx + direction + 20) % 20;
             document.querySelector('.eye-container').setAttribute('data-style', eyeStylesMap[currentEyeIdx]);
         }
 
         function updateGlassesStyle(direction) {
+            playThud();
             currentGlassesIdx = (currentGlassesIdx + direction + 20) % 20;
             document.querySelector('.glasses-container').setAttribute('data-glasses', glassesStylesMap[currentGlassesIdx]);
         }
 
         function updateHairStyle(direction) {
+            playThud();
             currentHairStyle += direction;
             if (currentHairStyle > totalHairStyles) currentHairStyle = 1;
             if (currentHairStyle < 1) currentHairStyle = totalHairStyles;
@@ -924,6 +957,7 @@
         }
 
         function updateOutfitStyle(direction) {
+            playThud();
             currentOutfit += direction;
             if (currentOutfit > totalOutfits) currentOutfit = 1;
             if (currentOutfit < 1) currentOutfit = totalOutfits;
@@ -968,6 +1002,7 @@
                 const currentTickThreshold = 40 + (360 * Math.pow(progress, 3));
 
                 if (timestamp - lastTick > currentTickThreshold) {
+                    playThud();
                     // Randomize indices
                     currentEyeIdx = Math.floor(Math.random() * 20);
                     currentGlassesIdx = Math.floor(Math.random() * 20);
@@ -1054,6 +1089,7 @@
             if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].includes(e.key)) {
                 let indexMap = e.key === '0' ? 9 : parseInt(e.key) - 1;
                 currentEyeIdx = indexMap;
+                playThud();
                 document.querySelector('.eye-container').setAttribute('data-style', eyeStylesMap[currentEyeIdx]);
             }
             

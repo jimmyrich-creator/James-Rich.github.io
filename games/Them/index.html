@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robots - Web Prototype</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="ui-layer">
+        <div id="hud" class="glass">
+            <div class="hud-item">
+                <span class="label">LEVEL:</span> <span id="level-display" class="value text-accent" style="font-size: 1.5rem; color: #a855f7; text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);">1</span>
+            </div>
+            <div class="hud-item">
+                <span class="label">PROGRESS:</span> <span id="progress-display" class="value">0 / 3</span>
+            </div>
+            <div class="hud-item">
+                <span class="label">MODE:</span> <span id="mode-display" class="value text-accent">ON FOOT</span>
+            </div>
+            <div class="hud-item">
+                <span class="label">HEALTH:</span> 
+                <div class="health-bar-container">
+                    <div id="health-bar" class="health-bar-fill"></div>
+                </div>
+            </div>
+            <div class="hud-item">
+                <span class="label">EMP:</span> <span id="emp-display" class="value">READY (Press E or X)</span>
+            </div>
+            <div class="controls-hint">
+                WASD / L-Stick: Move<br>
+                Mouse / R-Stick: Aim & Auto-Shoot as Robo Dog<br>
+                Space / Button A: Toggle Active Character<br>
+                E / Button X: EMP (as Robo Dog)<br>
+                <span style="color: #a855f7; font-weight: bold;">1-0: Toggle Trippy Effects</span>
+            </div>
+            <!-- Dynamic Active Effects HUD -->
+            <div id="effects-hud" style="margin-top: 1rem; font-size: 0.85rem; color: #a855f7; display: flex; flex-direction: column; gap: 0.2rem;"></div>
+        </div>
+        <div id="game-over" class="glass hidden">
+            <h1 id="game-over-title">GAME OVER</h1>
+            <p id="game-over-message">You were destroyed.</p>
+            <button id="restart-btn" class="highlighted">Retry (R / A or Start)</button>
+        </div>
+        <div id="level-up-banner" class="level-up-banner hidden">LEVEL UP!</div>
+    </div>
+    <div id="vignette-overlay"></div>
+    <canvas id="gameCanvas"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

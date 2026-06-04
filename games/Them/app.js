@@ -1,0 +1,2170 @@
+const canvas = document.getElementById('gameCanvas');
+const uiMode = document.getElementById('mode-display');
+const uiHealth = document.getElementById('health-bar');
+const uiEMP = document.getElementById('emp-display');
+const uiGameOver = document.getElementById('game-over');
+const btnRestart = document.getElementById('restart-btn');
+const gameOverTitle = document.getElementById('game-over-title');
+const gameOverMessage = document.getElementById('game-over-message');
+const uiLevel = document.getElementById('level-display');
+const uiProgress = document.getElementById('progress-display');
+const uiLevelUpBanner = document.getElementById('level-up-banner');
+
+// --- THREE.JS SETUP ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f172a); // dark slate blue
+scene.fog = new THREE.Fog(0x0f172a, 300, 1500);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
+// We will look down at an angle
+camera.position.set(0, 400, 300);
+
+const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(100, 500, 200);
+dirLight.castShadow = true;
+dirLight.shadow.camera.left = -1000;
+dirLight.shadow.camera.right = 1000;
+dirLight.shadow.camera.top = 1000;
+dirLight.shadow.camera.bottom = -1000;
+dirLight.shadow.camera.near = 0.5;
+dirLight.shadow.camera.far = 2000;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+scene.add(dirLight);
+
+function resize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', resize);
+
+// Input Handling
+const keys = {};
+const mouse = { x: 0, y: 0, down: false };
+
+// Psychedelic Effects State
+let effectFloorFlash = false;
+let effectRubberBuildings = false;
+let effectFilmNoir = false;
+let effectCamZoom = false;
+let effectFractals = false;
+let effectFloorScroll = false;
+let effectTronMode = false;
+let effectScreenShake = false;
+let effectTimeDilation = false;
+let effectCameraRoll = false;
+let camDistance = 400;
+let timeScale = 1.0;
+
+const uiEffectsHUD = document.getElementById('effects-hud');
+
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    
+    // Toggle visual effects
+    if (e.code === 'Digit1') toggleEffect(1);
+    if (e.code === 'Digit2') toggleEffect(2);
+    if (e.code === 'Digit3') toggleEffect(3);
+    if (e.code === 'Digit4') toggleEffect(4);
+    if (e.code === 'Digit5') toggleEffect(5);
+    if (e.code === 'Digit6') toggleEffect(6);
+    if (e.code === 'Digit7') toggleEffect(7);
+    if (e.code === 'Digit8') toggleEffect(8);
+    if (e.code === 'Digit9') toggleEffect(9);
+    if (e.code === 'Digit0') toggleEffect(10);
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mousedown', e => mouse.down = true);
+window.addEventListener('mouseup', e => mouse.down = false);
+
+// Gamepad State
+let gpState = { axes: [0,0,0,0], buttons: [] };
+let lastGpButtons = [];
+
+function updateGamepad() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let gp = null;
+    for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) { gp = gamepads[i]; break; }
+    }
+    if (gp) {
+        gpState.axes = gp.axes;
+        lastGpButtons = [...gpState.buttons];
+        gpState.buttons = gp.buttons.map(b => b.pressed);
+    } else {
+        gpState.axes = [0,0,0,0];
+        lastGpButtons = [];
+        gpState.buttons = [];
+    }
+}
+function justPressed(btnIdx) { return gpState.buttons[btnIdx] && !lastGpButtons[btnIdx]; }
+
+// Game Settings
+const WORLD_W = 3000;
+const WORLD_H = 3000;
+
+// Ground Plane
+function generateFloorTexture(isGrayscale = false) {
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = 1024;
+    tCanvas.height = 1024;
+    const tCtx = tCanvas.getContext('2d');
+    
+    tCtx.fillStyle = '#ffffff';
+    tCtx.fillRect(0, 0, 1024, 1024);
+    
+    const cols = 20; 
+    const colW = 1024 / cols;
+    for(let i=0; i<cols; i++) {
+        const hue = i * (360/cols);
+        tCtx.fillStyle = isGrayscale ? `hsl(0, 0%, ${50 + Math.sin(i)*12}%)` : `hsl(${hue}, 80%, 65%)`;
+        tCtx.fillRect(i * colW, 0, colW, 1024);
+    }
+    
+    tCtx.globalCompositeOperation = 'multiply';
+    const rows = 15; 
+    const rowH = 1024 / rows;
+    for(let i=0; i<rows; i++) {
+        const hue = 180 + i * (180/rows);
+        tCtx.fillStyle = isGrayscale ? `hsl(0, 0%, ${60 + Math.cos(i)*12}%)` : `hsl(${hue}, 80%, 65%)`; 
+        tCtx.fillRect(0, i * rowH, 1024, rowH);
+    }
+    
+    tCtx.globalCompositeOperation = 'source-over';
+    
+    const tex = new THREE.CanvasTexture(tCanvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+}
+
+function generateUnionJackTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = '#012169'; 
+    ctx.fillRect(0, 0, 256, 128);
+    
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 24;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(256, 128); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, 128); ctx.lineTo(256, 0); ctx.stroke();
+    
+    ctx.strokeStyle = '#C8102E';
+    ctx.lineWidth = 10;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(256, 128); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, 128); ctx.lineTo(256, 0); ctx.stroke();
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(104, 0, 48, 128);
+    ctx.fillRect(0, 40, 256, 48);
+    
+    ctx.fillStyle = '#C8102E';
+    ctx.fillRect(112, 0, 32, 128);
+    ctx.fillRect(0, 48, 256, 32);
+    
+    return new THREE.CanvasTexture(canvas);
+}
+
+const groundGeo = new THREE.PlaneGeometry(WORLD_W, WORLD_H);
+const colorFloorTexture = generateFloorTexture(false);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: colorFloorTexture, roughness: 0.9, metalness: 0.1 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.set(WORLD_W/2, 0, WORLD_H/2);
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Grid Helper for that retro feel
+const gridHelper = new THREE.GridHelper(WORLD_W, 60, 0x334155, 0x1e293b);
+gridHelper.position.set(WORLD_W/2, 1, WORLD_H/2);
+scene.add(gridHelper);
+
+// Common Materials
+const matMech = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.4 });
+const matMechAccent = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xf43f5e, emissiveIntensity: 0.5 });
+const matFoot = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
+const matDog = new THREE.MeshStandardMaterial({ color: 0xfbbf24 });
+const matEnemy = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.5 });
+const matEnemyEye = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.8 });
+const matAntBody = new THREE.MeshStandardMaterial({ color: 0x0f0f12, metalness: 0.8, roughness: 0.25 });
+const tronCyan = new THREE.Color(0x00f0ff);
+const tronPink = new THREE.Color(0xff007f);
+function generateBuildingTexture() {
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = 256;
+    tCanvas.height = 256;
+    const tCtx = tCanvas.getContext('2d');
+    
+    tCtx.fillStyle = '#ffffff';
+    tCtx.fillRect(0, 0, 256, 256);
+    
+    // Optical illusion: dense concentric squares
+    tCtx.strokeStyle = '#000000';
+    tCtx.lineWidth = 4;
+    for(let i=4; i<128; i+=8) {
+        tCtx.strokeRect(i, i, 256-i*2, 256-i*2);
+    }
+
+    const tex = new THREE.CanvasTexture(tCanvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.magFilter = THREE.NearestFilter; // keeps it blocky/crisp
+    return tex;
+}
+
+const buildingTexture = generateBuildingTexture();
+const buildingPalette = [0x111111, 0x333333, 0x555555, 0x777777, 0x999999]; // Greyscales for optical illusion effect
+const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+const coneGeo = new THREE.ConeGeometry(1, 1, 3);
+const matCollectable = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.4, metalness: 0.8, roughness: 0.2 });
+const matParachute = new THREE.MeshStandardMaterial({ map: generateUnionJackTexture(), side: THREE.DoubleSide });
+
+function toggleEffect(id) {
+    if (id === 1) {
+        effectFloorFlash = !effectFloorFlash;
+        if (!effectFloorFlash) groundMat.color.setHex(0xffffff); // Reset
+    } else if (id === 2) {
+        effectRubberBuildings = !effectRubberBuildings;
+        if (!effectRubberBuildings) {
+            // Reset building scale, position, rotation
+            buildings.forEach(b => {
+                b.mesh.scale.set(b.w, b.height, b.h);
+                b.mesh.position.y = b.height / 2;
+                b.mesh.rotation.set(0, 0, 0);
+                
+                b.line.scale.set(b.w, b.height, b.h);
+                b.line.position.y = b.height / 2;
+                b.line.rotation.set(0, 0, 0);
+            });
+        }
+    } else if (id === 3) {
+        effectFilmNoir = !effectFilmNoir;
+        const overlay = document.getElementById('grain-overlay');
+        if (effectFilmNoir) {
+            canvas.classList.add('film-noir');
+            overlay.classList.add('active');
+        } else {
+            canvas.classList.remove('film-noir');
+            overlay.classList.remove('active');
+        }
+    } else if (id === 4) {
+        effectCamZoom = !effectCamZoom;
+    } else if (id === 5) {
+        effectFractals = !effectFractals;
+        if (!effectFractals) {
+            // Restore default optical illusion building texture
+            const canvasTex = buildingTexture.image;
+            if (canvasTex) {
+                const ctx = canvasTex.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 256, 256);
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                for(let i=4; i<128; i+=8) {
+                    ctx.strokeRect(i, i, 256-i*2, 256-i*2);
+                }
+                buildingTexture.needsUpdate = true;
+            }
+        }
+    } else if (id === 6) {
+        effectFloorScroll = !effectFloorScroll;
+        if (!effectFloorScroll) {
+            floorTexture.offset.set(0, 0);
+        }
+    } else if (id === 7) {
+        effectTronMode = !effectTronMode;
+        buildings.forEach(b => {
+            b.mesh.visible = !effectTronMode;
+            if (!effectTronMode) {
+                b.line.material.color.setHex(0xffffff); // Reset color to white
+            }
+        });
+    } else if (id === 8) {
+        effectScreenShake = !effectScreenShake;
+    } else if (id === 9) {
+        effectTimeDilation = !effectTimeDilation;
+        timeScale = effectTimeDilation ? 0.20 : 1.0;
+    } else if (id === 10) {
+        effectCameraRoll = !effectCameraRoll;
+        if (!effectCameraRoll) {
+            camera.up.set(0, 1, 0);
+        }
+    }
+    updateEffectsHUD();
+}
+
+function updateEffectsHUD() {
+    if (!uiEffectsHUD) return;
+    let html = '';
+    if (effectFloorFlash) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (1) STROBE FLOOR ON</div>';
+    if (effectRubberBuildings) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (2) RUBBER CITY ON</div>';
+    if (effectFilmNoir) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (3) FILM NOIR ON</div>';
+    if (effectCamZoom) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (4) BREATHING CAMERA ON</div>';
+    if (effectFractals) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (5) FRACTAL WALLS ON</div>';
+    if (effectFloorScroll) html += '<div style="text-shadow: 0 0 8px #06b6d4;">✦ (6) HYPERSPACE FLOOR ON</div>';
+    if (effectTronMode) html += '<div style="text-shadow: 0 0 8px #06b6d4;">✦ (7) TRON WIREFRAME ON</div>';
+    if (effectScreenShake) html += '<div style="text-shadow: 0 0 8px #06b6d4;">✦ (8) EARTHQUAKE SHAKE ON</div>';
+    if (effectTimeDilation) html += '<div style="text-shadow: 0 0 8px #06b6d4;">✦ (9) BULLET TIME ON</div>';
+    if (effectCameraRoll) html += '<div style="text-shadow: 0 0 8px #06b6d4;">✦ (0) DIZZY CAMERA ROLL ON</div>';
+    uiEffectsHUD.innerHTML = html;
+}
+
+let fractalTime = 0;
+function animateFractalTexture() {
+    fractalTime += 0.04;
+    const canvasTex = buildingTexture.image;
+    if (!canvasTex) return;
+    const ctx = canvasTex.getContext('2d');
+    const w = canvasTex.width;
+    const h = canvasTex.height;
+    
+    // Recursive rotating square fractal
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 5;
+    
+    ctx.save();
+    ctx.translate(w/2, h/2);
+    const depth = 8;
+    for (let i = 0; i < depth; i++) {
+        ctx.rotate(fractalTime * 0.15 + i * 0.1);
+        let scale = 0.76 + 0.06 * Math.sin(fractalTime * 0.4 + i);
+        ctx.scale(scale, scale);
+        ctx.strokeRect(-w/2, -h/2, w, h);
+    }
+    ctx.restore();
+    buildingTexture.needsUpdate = true;
+}
+
+function checkBuildingCollision(x, y, radius) {
+    for(let b of buildings) {
+        if (x + radius > b.x && x - radius < b.x + b.w &&
+            y + radius > b.y && y - radius < b.y + b.h) {
+            return true;
+        }
+    }
+    return false;
+}
+
+class Player {
+    constructor() {
+        this.x = WORLD_W / 2;
+        this.y = WORLD_H / 2;
+        this.radius = 15;
+        this.controlDog = false;
+        this.health = 100;
+        this.maxHealth = 100;
+        this.speedFoot = 5;
+        this.lastToggle = 0;
+        this.lastShot = 0;
+        this.empReady = true;
+        this.lastEmpTime = 0;
+
+        this.group = new THREE.Group();
+        scene.add(this.group);
+
+        // Voxel Model - Foot (Stealth Player)
+        this.footMesh = new THREE.Group();
+        let body = new THREE.Mesh(boxGeo, matFoot);
+        body.scale.set(12, 18, 12);
+        body.position.y = 64; // Raised to account for taller legs
+        body.castShadow = true;
+        let head = new THREE.Mesh(boxGeo, matFoot);
+        head.scale.set(10, 10, 10);
+        head.position.set(0, 78, 0); // Raised to match body
+        head.castShadow = true;
+        this.footMesh.add(body, head);
+        
+        // Store references for sways
+        this.playerBody = body;
+        this.playerHead = head;
+
+        // Add 4-joint legs (Hip, Knee, Ankle, Toes)
+        const createPlayerLeg = (px, py, pz) => {
+            const legGroup = new THREE.Group();
+            legGroup.position.set(px, py, pz);
+            
+            // Thigh (Hip to Knee joint)
+            const thighGroup = new THREE.Group();
+            const thighMesh = new THREE.Mesh(boxGeo, matFoot);
+            thighMesh.scale.set(3, 20, 3);
+            thighMesh.position.y = -10; // Pivot at the top (hip)
+            thighMesh.castShadow = true;
+            thighGroup.add(thighMesh);
+            
+            // Knee to Ankle joint
+            const kneeGroup = new THREE.Group();
+            kneeGroup.position.set(0, -20, 0);
+            const calfMesh = new THREE.Mesh(boxGeo, matFoot);
+            calfMesh.scale.set(2.5, 20, 2.5);
+            calfMesh.position.y = -10; // Pivot at top (knee)
+            calfMesh.castShadow = true;
+            kneeGroup.add(calfMesh);
+            
+            // Ankle to Toes joint
+            const ankleGroup = new THREE.Group();
+            ankleGroup.position.set(0, -20, 0);
+            const footPartMesh = new THREE.Mesh(boxGeo, matFoot);
+            footPartMesh.scale.set(2, 15, 2);
+            footPartMesh.position.y = -7.5; // Pivot at top (ankle)
+            footPartMesh.castShadow = true;
+            ankleGroup.add(footPartMesh);
+            
+            // Toes
+            const toeGroup = new THREE.Group();
+            toeGroup.position.set(0, -15, 0);
+            const toeMesh = new THREE.Mesh(boxGeo, matFoot);
+            toeMesh.scale.set(2.5, 2, 6);
+            toeMesh.position.set(0, -1, 2.5); // Pivot at the back (toe joint), extends forward
+            toeMesh.castShadow = true;
+            toeGroup.add(toeMesh);
+            
+            ankleGroup.add(toeGroup);
+            kneeGroup.add(ankleGroup);
+            thighGroup.add(kneeGroup);
+            legGroup.add(thighGroup);
+            
+            // Save references for animation
+            legGroup.thigh = thighGroup;
+            legGroup.knee = kneeGroup;
+            legGroup.ankle = ankleGroup;
+            legGroup.toe = toeGroup;
+            
+            return legGroup;
+        };
+
+        this.legL = createPlayerLeg(-4, 60, 0);
+        this.legR = createPlayerLeg(4, 60, 0);
+        this.footMesh.add(this.legL, this.legR);
+        this.walkCycle = 0;
+
+        this.group.add(this.footMesh);
+    }
+
+    update() {
+        if (this.health <= 0) return;
+
+        // Right stick or Arrow keys to orbit/pitch the camera
+        if (!effectCamZoom) {
+            // Gamepad right stick (inverted so pushing right looks right, pushing up looks up)
+            if (Math.abs(gpState.axes[2]) > 0.15) {
+                cameraYaw -= gpState.axes[2] * 0.04 * timeScale;
+            }
+            if (Math.abs(gpState.axes[3]) > 0.15) {
+                cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch - gpState.axes[3] * 0.03 * timeScale));
+            }
+            // Keyboard Arrow keys (synchronized with inverted stick controls)
+            if (keys['ArrowLeft']) cameraYaw += 0.04 * timeScale;
+            if (keys['ArrowRight']) cameraYaw -= 0.04 * timeScale;
+            if (keys['ArrowUp']) cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch + 0.03 * timeScale));
+            if (keys['ArrowDown']) cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch - 0.03 * timeScale));
+        }
+
+        let togglePressed = keys['Space'] || justPressed(0);
+        if (togglePressed && Date.now() - this.lastToggle > 500) {
+            this.controlDog = !this.controlDog;
+            this.lastToggle = Date.now();
+            updateHUD();
+        }
+
+        let empPressed = keys['KeyE'] || justPressed(2);
+        if (empPressed && this.empReady && this.controlDog) {
+            fireEMP();
+        }
+
+        let camForwardX = 0;
+        let camForwardZ = -1;
+        let camRightX = 1;
+        let camRightZ = 0;
+
+        if (!effectCamZoom) {
+            // Get direction vector pointing from camera to controlled character
+            let targetX = this.controlDog ? bigDog.x : this.x;
+            let targetZ = this.controlDog ? bigDog.y : this.y;
+            const dirX = targetX - camera.position.x;
+            const dirZ = targetZ - camera.position.z;
+            const len = Math.sqrt(dirX * dirX + dirZ * dirZ);
+            if (len > 0) {
+                camForwardX = dirX / len;
+                camForwardZ = dirZ / len;
+                // Correct 90-degree clockwise right-turn vector
+                camRightX = -camForwardZ;
+                camRightZ = camForwardX;
+            }
+        }
+
+        let moveX = 0, moveY = 0;
+        if (keys['KeyW']) moveY += 1; // forward relative to camera view
+        if (keys['KeyS']) moveY -= 1; // backward
+        if (keys['KeyA']) moveX -= 1; // left
+        if (keys['KeyD']) moveX += 1; // right
+
+        if (Math.abs(gpState.axes[0]) > 0.2) moveX = gpState.axes[0];
+        if (Math.abs(gpState.axes[1]) > 0.2) moveY = -gpState.axes[1]; // Gamepad Y is inverted (up is negative)
+
+        let dx = camForwardX * moveY + camRightX * moveX;
+        let dy = camForwardZ * moveY + camRightZ * moveX;
+
+        let mag = Math.sqrt(dx*dx + dy*dy);
+        if (mag > 0 && mag > 1) { dx /= mag; dy /= mag; }
+
+        let currentSpeed = this.speedFoot;
+        
+        if (this.controlDog && bigDog && bigDog.active && !bigDog.isParachuting) {
+            // Move Robo Dog
+            let dogRadius = 10;
+            let newX = bigDog.x + dx * currentSpeed;
+            let newY = bigDog.y + dy * currentSpeed;
+            if (!checkBuildingCollision(newX, bigDog.y, dogRadius)) bigDog.x = newX;
+            if (!checkBuildingCollision(bigDog.x, newY, dogRadius)) bigDog.y = newY;
+            bigDog.x = Math.max(0, Math.min(WORLD_W, bigDog.x));
+            bigDog.y = Math.max(0, Math.min(WORLD_H, bigDog.y));
+
+            // Human follows Robo Dog
+            let hdx = bigDog.x - this.x;
+            let hdy = bigDog.y - this.y;
+            let hdist = Math.sqrt(hdx*hdx + hdy*hdy);
+            if (hdist > 80) {
+                let hdxMove = (hdx/hdist) * this.speedFoot * 0.9 * timeScale;
+                let hdyMove = (hdy/hdist) * this.speedFoot * 0.9 * timeScale;
+                if (!checkBuildingCollision(this.x + hdxMove, this.y, this.radius)) this.x += hdxMove;
+                if (!checkBuildingCollision(this.x, this.y + hdyMove, this.radius)) this.y += hdyMove;
+            }
+        } else {
+            // Move Human
+            let newX = this.x + dx * currentSpeed;
+            let newY = this.y + dy * currentSpeed;
+            if (!checkBuildingCollision(newX, this.y, this.radius)) this.x = newX;
+            if (!checkBuildingCollision(this.x, newY, this.radius)) this.y = newY;
+            this.x = Math.max(0, Math.min(WORLD_W, this.x));
+            this.y = Math.max(0, Math.min(WORLD_H, this.y));
+        }
+
+        // Determine rotation direction
+        let rotated = false;
+        if (this.controlDog && bigDog && bigDog.active) {
+            let aimX = 0, aimY = 0;
+            let aiming = false;
+
+            if (Math.abs(gpState.axes[2]) > 0.2 || Math.abs(gpState.axes[3]) > 0.2) {
+                aimX = camForwardX; aimY = camForwardZ; aiming = true;
+            } else if (mouse.down) {
+                aimX = (mouse.x - window.innerWidth/2); aimY = (mouse.y - window.innerHeight/2); aiming = true;
+            }
+
+            if (aiming) {
+                let aimMag = Math.sqrt(aimX*aimX + aimY*aimY);
+                if (aimMag > 0) {
+                    bigDog.group.rotation.y = Math.atan2(aimX, aimY);
+                    rotated = true;
+                }
+            }
+            if (!rotated && mag > 0) {
+                bigDog.group.rotation.y = Math.atan2(dx, dy);
+            }
+            
+            // Human faces Dog
+            let hdx = bigDog.x - this.x;
+            let hdy = bigDog.y - this.y;
+            let hdist = Math.sqrt(hdx*hdx + hdy*hdy);
+            if (hdist > 40) {
+                this.group.rotation.y = Math.atan2(hdx, hdy);
+            }
+        } else {
+            // Face movement direction if moving
+            if (mag > 0) {
+                this.group.rotation.y = Math.atan2(dx, dy);
+            }
+        }
+
+        this.group.position.set(this.x, 0, this.y);
+
+        if (this.controlDog && bigDog && bigDog.active && !bigDog.isParachuting) {
+            let aimX = 0, aimY = 0;
+            let shooting = false;
+
+            if (Math.abs(gpState.axes[2]) > 0.2 || Math.abs(gpState.axes[3]) > 0.2) {
+                aimX = camForwardX; aimY = camForwardZ; shooting = true;
+            } else if (mouse.down) {
+                aimX = (mouse.x - window.innerWidth/2); aimY = (mouse.y - window.innerHeight/2); shooting = true;
+            }
+            if (gpState.buttons[7]) {
+                shooting = true;
+                if (aimX === 0 && aimY === 0) {
+                    aimX = dx; aimY = dy;
+                }
+            }
+
+            if (shooting && Date.now() - this.lastShot > 150) {
+                let aimMag = Math.sqrt(aimX*aimX + aimY*aimY);
+                if (aimMag > 0) {
+                    projectiles.push(new Projectile(bigDog.x, bigDog.y, aimX/aimMag, aimY/aimMag, true));
+                    this.lastShot = Date.now();
+                }
+            }
+        }
+
+        // Animate stealth player legs
+        if (!this.isMech && mag > 0) {
+            this.walkCycle += 0.22 * timeScale;
+            
+            // Asymmetric phases & secondary micro-movements
+            const phaseL = this.walkCycle;
+            const phaseR = this.walkCycle + Math.PI + 0.18; // Desynchronized phase
+            
+            const swingL = 0.55 * Math.sin(phaseL) + 0.08 * Math.sin(phaseL * 2);
+            const swingR = 0.55 * Math.sin(phaseR) + 0.08 * Math.sin(phaseR * 2);
+            
+            // Left leg
+            this.legL.thigh.rotation.x = swingL;
+            this.legL.knee.rotation.x = Math.max(0, swingL) * 1.6 + 0.1 * Math.sin(phaseL * 2); 
+            this.legL.ankle.rotation.x = Math.max(0, swingL) * 0.7 + 0.1 * Math.cos(phaseL);
+            this.legL.toe.rotation.x = Math.max(0, -swingL) * 0.5;
+            this.legL.position.y = 60 + Math.max(0, swingL) * 8;
+            
+            // Right leg
+            this.legR.thigh.rotation.x = swingR;
+            this.legR.knee.rotation.x = Math.max(0, swingR) * 1.6 + 0.1 * Math.sin(phaseR * 2);
+            this.legR.ankle.rotation.x = Math.max(0, swingR) * 0.7 + 0.1 * Math.cos(phaseR);
+            this.legR.toe.rotation.x = Math.max(0, -swingR) * 0.5;
+            this.legR.position.y = 60 + Math.max(0, swingR) * 8;
+            
+            // Hips and head dynamic sway
+            if (this.playerBody && this.playerHead) {
+                this.playerBody.position.y = 64 + Math.sin(this.walkCycle * 2) * 1.2; // Bobbing
+                this.playerBody.rotation.y = Math.sin(this.walkCycle) * 0.08;        // Hip sway
+                this.playerBody.rotation.z = Math.cos(this.walkCycle) * 0.04;        // Weight shift
+                this.playerHead.position.y = 78 + Math.abs(Math.sin(this.walkCycle * 2)) * 1.5;
+            }
+        } else if (!this.isMech) {
+            // Smoothly return to rest state
+            this.legL.thigh.rotation.x += (0 - this.legL.thigh.rotation.x) * 0.15;
+            this.legL.knee.rotation.x += (0 - this.legL.knee.rotation.x) * 0.15;
+            this.legL.ankle.rotation.x += (0 - this.legL.ankle.rotation.x) * 0.15;
+            this.legL.toe.rotation.x += (0 - this.legL.toe.rotation.x) * 0.15;
+            this.legL.position.y += (60 - this.legL.position.y) * 0.15;
+
+            this.legR.thigh.rotation.x += (0 - this.legR.thigh.rotation.x) * 0.15;
+            this.legR.knee.rotation.x += (0 - this.legR.knee.rotation.x) * 0.15;
+            this.legR.ankle.rotation.x += (0 - this.legR.ankle.rotation.x) * 0.15;
+            this.legR.toe.rotation.x += (0 - this.legR.toe.rotation.x) * 0.15;
+            this.legR.position.y += (60 - this.legR.position.y) * 0.15;
+            
+            if (this.playerBody && this.playerHead) {
+                this.playerBody.position.y += (64 - this.playerBody.position.y) * 0.15;
+                this.playerBody.rotation.y += (0 - this.playerBody.rotation.y) * 0.15;
+                this.playerBody.rotation.z += (0 - this.playerBody.rotation.z) * 0.15;
+                this.playerHead.position.y += (78 - this.playerHead.position.y) * 0.15;
+            }
+        }
+    }
+
+    destroy() {
+        scene.remove(this.group);
+    }
+}
+
+class BigDog {
+    constructor() {
+        this.x = player.x + 50;
+        this.y = player.y + 50;
+        this.altitude = 0;
+        this.isParachuting = false;
+        this.active = true;
+        this.dogScale = 1.0;
+        this.group = new THREE.Group();
+        
+        let body = new THREE.Mesh(boxGeo, matDog);
+        body.scale.set(16, 12, 24);
+        body.position.y = 84; // Raised to account for taller legs
+        body.castShadow = true;
+        this.body = body; // Stored reference for weight sways
+        
+        this.head = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({color: 0x222222}));
+        this.head.scale.set(8, 8, 8);
+        this.head.position.set(0, 90, 12); // Raised head position
+        this.head.castShadow = true;
+        
+        // Parachute
+        let parachuteGeo = new THREE.SphereGeometry(25, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+        this.parachuteMesh = new THREE.Mesh(parachuteGeo, matParachute);
+        this.parachuteMesh.position.y = 120; // Raised parachute position
+        this.parachuteMesh.visible = false;
+        
+        this.group.add(body, this.head, this.parachuteMesh);
+
+        // Add 4 legs
+        const matLeg = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
+        const createLeg = (px, py, pz) => {
+            const legGroup = new THREE.Group();
+            legGroup.position.set(px, py, pz);
+            
+            // Upper leg segment (hip joint to knee joint)
+            const upperLegGroup = new THREE.Group();
+            const upperLegMesh = new THREE.Mesh(boxGeo, matLeg);
+            upperLegMesh.scale.set(4, 40, 4); // Height is 40 (5x original 8, combined with lower leg for 10x taller)
+            upperLegMesh.position.y = -20; // Pivot at the hip
+            upperLegMesh.castShadow = true;
+            upperLegGroup.add(upperLegMesh);
+            
+            // Lower leg segment (knee joint to foot)
+            const lowerLegGroup = new THREE.Group();
+            lowerLegGroup.position.set(0, -40, 0); // Positioned at knee joint
+            const lowerLegMesh = new THREE.Mesh(boxGeo, matLeg);
+            lowerLegMesh.scale.set(3, 40, 3); // Height is 40, slightly thinner for visual structure
+            lowerLegMesh.position.y = -20; // Pivot at the knee
+            lowerLegMesh.castShadow = true;
+            lowerLegGroup.add(lowerLegMesh);
+            
+            upperLegGroup.add(lowerLegGroup);
+            legGroup.add(upperLegGroup);
+            
+            // Save references for animation
+            legGroup.upper = upperLegGroup;
+            legGroup.lower = lowerLegGroup;
+            
+            return legGroup;
+        };
+
+        // Attach legs to body bottom (legs are 80 units long, so hip is at y = 80)
+        this.legFL = createLeg(-6, 83, 8);
+        this.legFR = createLeg(6, 83, 8);
+        this.legBL = createLeg(-6, 83, -8);
+        this.legBR = createLeg(6, 83, -8);
+
+        this.group.add(this.legFL, this.legFR, this.legBL, this.legBR);
+
+        // Add a wagging tail
+        const tailGroup = new THREE.Group();
+        tailGroup.position.set(0, 86, -12); // Raised tail position
+        const tailMesh = new THREE.Mesh(boxGeo, matDog);
+        tailMesh.scale.set(2, 2, 10);
+        tailMesh.position.z = -5; // Extends backward
+        tailMesh.rotation.x = -0.3; // Upward tilt
+        tailMesh.castShadow = true;
+        tailGroup.add(tailMesh);
+        this.tail = tailGroup;
+        this.group.add(this.tail);
+
+        this.walkCycle = 0;
+
+        scene.add(this.group);
+    }
+    update() {
+        if (!this.active) return;
+        this.group.scale.set(this.dogScale, this.dogScale, this.dogScale);
+        
+        this.parachuteMesh.visible = this.isParachuting;
+
+        let isMoving = false;
+
+        if (this.isParachuting) {
+            this.altitude -= 4 * timeScale; // slowly drift down
+            this.x += (player.x - this.x) * 0.05 * timeScale; // drift towards player loosely
+            this.y += (player.y - this.y) * 0.05 * timeScale;
+            
+            if (this.altitude <= 0) {
+                this.altitude = 0;
+                this.isParachuting = false;
+            }
+
+            // Flail legs and tail while parachuting!
+            const time = Date.now() * 0.01 * timeScale;
+            this.legFL.upper.rotation.x = Math.sin(time) * 0.5;
+            this.legFL.lower.rotation.x = -Math.abs(Math.sin(time)) * 0.6;
+            this.legFR.upper.rotation.y = Math.cos(time) * 0.3;
+            this.legBL.upper.rotation.x = Math.sin(time + 1) * 0.4;
+            this.legBL.lower.rotation.x = -Math.abs(Math.sin(time + 1)) * 0.6;
+            this.legBR.upper.rotation.y = -Math.cos(time + 1) * 0.3;
+            this.tail.rotation.y = Math.sin(time * 2) * 0.2;
+            this.head.position.y = 90 + Math.sin(time) * 1.5;
+        } else {
+            if (!player.controlDog) {
+                let dx = player.x - this.x;
+                let dy = player.y - this.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > 80) {
+                    let dxMove = (dx/dist) * player.speedFoot * 0.9 * timeScale;
+                    let dyMove = (dy/dist) * player.speedFoot * 0.9 * timeScale;
+                    if (!checkBuildingCollision(this.x + dxMove, this.y, 10)) this.x += dxMove;
+                    if (!checkBuildingCollision(this.x, this.y + dyMove, 10)) this.y += dyMove;
+                    this.group.rotation.y = Math.atan2(dx, dy);
+                    isMoving = true;
+                }
+            } else {
+                let hasInput = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'] || 
+                               Math.abs(gpState.axes[0]) > 0.2 || Math.abs(gpState.axes[1]) > 0.2;
+                if (hasInput) {
+                    isMoving = true;
+                }
+            }
+
+            if (isMoving) {
+                // Trot cycle based on movement speed
+                this.walkCycle += 0.25 * timeScale;
+                
+                // Desynchronized phase offsets for all four legs (less uniform)
+                const swingFL = 0.6 * Math.sin(this.walkCycle);
+                const swingFR = 0.6 * Math.sin(this.walkCycle + Math.PI + 0.15);
+                const swingBL = 0.6 * Math.sin(this.walkCycle + Math.PI - 0.15);
+                const swingBR = 0.6 * Math.sin(this.walkCycle + 0.2);
+                
+                // Swing diagonal pairs at hips (with offsets)
+                this.legFL.upper.rotation.x = swingFL;
+                this.legBR.upper.rotation.x = swingBR;
+                this.legFR.upper.rotation.x = swingFR;
+                this.legBL.upper.rotation.x = swingBL;
+                
+                // Bend knees based on their individual offsets
+                this.legFL.lower.rotation.x = -Math.abs(swingFL) * 1.3;
+                this.legBR.lower.rotation.x = -Math.abs(swingBR) * 1.3;
+                this.legFR.lower.rotation.x = -Math.abs(swingFR) * 1.3;
+                this.legBL.lower.rotation.x = -Math.abs(swingBL) * 1.3;
+                
+                // Lift legs slightly as they swing forward (base height is 83)
+                this.legFL.position.y = 83 + Math.max(0, swingFL) * 12;
+                this.legBR.position.y = 83 + Math.max(0, swingBR) * 12;
+                this.legFR.position.y = 83 + Math.max(0, swingFR) * 12;
+                this.legBL.position.y = 83 + Math.max(0, swingBL) * 12;
+
+                // Body weight shifts (bobbing, rolling, yawning)
+                if (this.body) {
+                    this.body.position.y = 84 + Math.sin(this.walkCycle * 2) * 1.5;
+                    this.body.rotation.z = Math.sin(this.walkCycle) * 0.04;
+                    this.body.rotation.y = Math.cos(this.walkCycle) * 0.03;
+                }
+
+                // Fast tail wag when running
+                this.tail.rotation.y = Math.sin(this.walkCycle * 2.5) * 0.4;
+                
+                // Bob head
+                this.head.position.y = 90 + Math.abs(Math.sin(this.walkCycle)) * 4.5;
+                this.head.position.x = Math.sin(this.walkCycle) * 0.8;
+            } else {
+                // Return legs/tail/head to rest
+                this.legFL.upper.rotation.x += (0 - this.legFL.upper.rotation.x) * 0.15;
+                this.legFR.upper.rotation.x += (0 - this.legFR.upper.rotation.x) * 0.15;
+                this.legBL.upper.rotation.x += (0 - this.legBL.upper.rotation.x) * 0.15;
+                this.legBR.upper.rotation.x += (0 - this.legBR.upper.rotation.x) * 0.15;
+
+                this.legFL.lower.rotation.x += (0 - this.legFL.lower.rotation.x) * 0.15;
+                this.legFR.lower.rotation.x += (0 - this.legFR.lower.rotation.x) * 0.15;
+                this.legBL.lower.rotation.x += (0 - this.legBL.lower.rotation.x) * 0.15;
+                this.legBR.lower.rotation.x += (0 - this.legBR.lower.rotation.x) * 0.15;
+
+                this.legFL.position.y += (83 - this.legFL.position.y) * 0.15;
+                this.legFR.position.y += (83 - this.legFR.position.y) * 0.15;
+                this.legBL.position.y += (83 - this.legBL.position.y) * 0.15;
+                this.legBR.position.y += (83 - this.legBR.position.y) * 0.15;
+
+                if (this.body) {
+                    this.body.position.y += (84 - this.body.position.y) * 0.15;
+                    this.body.rotation.z += (0 - this.body.rotation.z) * 0.15;
+                    this.body.rotation.y += (0 - this.body.rotation.y) * 0.15;
+                }
+
+                // Slow happy wag when idle
+                const time = Date.now() * 0.003;
+                this.tail.rotation.y = Math.sin(time) * 0.2;
+                this.head.position.y += (90 - this.head.position.y) * 0.15;
+                this.head.position.x += (0 - this.head.position.x) * 0.15;
+            }
+        }
+        this.group.position.set(this.x, this.altitude, this.y);
+    }
+    destroy() {
+        scene.remove(this.group);
+    }
+}
+
+class Enemy {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = 50;
+        this.health = 30;
+        this.speed = 1.5 + Math.random() + (currentLevel - 1) * 0.35; // Scale speed with level progress
+        this.angle = Math.random() * Math.PI * 2;
+        this.state = 'wander'; 
+        this.lastShot = 0;
+
+        this.group = new THREE.Group();
+        
+        // Define a unique glow material per enemy instance to avoid global color bleeding
+        this.glowMat = new THREE.MeshStandardMaterial({ 
+            color: 0x8b00ff, // Deep gothic purple/violet
+            emissive: 0x8b00ff, 
+            emissiveIntensity: 0.8,
+            metalness: 0.5,
+            roughness: 0.5
+        });
+
+        // antBodyGroup will contain all segments of the ant (Thorax, Head, Mandibles, Antennae, Abdomen, Spikes, Eyes)
+        this.antBodyGroup = new THREE.Group();
+
+        // Thorax (central part)
+        let thorax = new THREE.Mesh(boxGeo, matAntBody);
+        thorax.scale.set(14, 14, 32);
+        thorax.position.set(0, 84, -2);
+        thorax.castShadow = true;
+        thorax.receiveShadow = true;
+        this.antBodyGroup.add(thorax);
+
+        // Head
+        let head = new THREE.Mesh(boxGeo, matAntBody);
+        head.scale.set(16, 16, 16);
+        head.position.set(0, 88, 24);
+        head.castShadow = true;
+        head.receiveShadow = true;
+        this.antBodyGroup.add(head);
+
+        // Mandibles (creepy curved teeth)
+        let mandibleL = new THREE.Mesh(boxGeo, matAntBody);
+        mandibleL.scale.set(2, 4, 10);
+        mandibleL.position.set(-5, 84, 32);
+        mandibleL.rotation.set(0.1, -0.4, -0.2);
+        mandibleL.castShadow = true;
+        this.antBodyGroup.add(mandibleL);
+
+        let mandibleR = new THREE.Mesh(boxGeo, matAntBody);
+        mandibleR.scale.set(2, 4, 10);
+        mandibleR.position.set(5, 84, 32);
+        mandibleR.rotation.set(0.1, 0.4, 0.2);
+        mandibleR.castShadow = true;
+        this.antBodyGroup.add(mandibleR);
+
+        // Antennae
+        let antennaL = new THREE.Mesh(boxGeo, matAntBody);
+        antennaL.scale.set(1.5, 1.5, 14);
+        antennaL.position.set(-6, 96, 28);
+        antennaL.rotation.set(0.4, -0.3, 0);
+        antennaL.castShadow = true;
+        this.antBodyGroup.add(antennaL);
+
+        let antennaR = new THREE.Mesh(boxGeo, matAntBody);
+        antennaR.scale.set(1.5, 1.5, 14);
+        antennaR.position.set(6, 96, 28);
+        antennaR.rotation.set(0.4, 0.3, 0);
+        antennaR.castShadow = true;
+        this.antBodyGroup.add(antennaR);
+
+        // Abdomen (gaster - bulbous back part)
+        let abdomen = new THREE.Mesh(boxGeo, matAntBody);
+        abdomen.scale.set(22, 18, 30);
+        abdomen.position.set(0, 86, -30);
+        abdomen.rotation.set(-0.15, 0, 0);
+        abdomen.castShadow = true;
+        abdomen.receiveShadow = true;
+        this.antBodyGroup.add(abdomen);
+
+        // Abdominal Spikes
+        for (let i = 0; i < 3; i++) {
+            let spike = new THREE.Mesh(boxGeo, matAntBody);
+            spike.scale.set(3, 6, 3);
+            let spikeZ = -22 - i * 8;
+            let spikeY = 86 + 9 - i * 2;
+            spike.position.set(0, spikeY + 2, spikeZ);
+            spike.rotation.set(0.3, 0, 0);
+            spike.castShadow = true;
+            this.antBodyGroup.add(spike);
+        }
+
+        // Eyes (glowing)
+        this.eyeL = new THREE.Mesh(boxGeo, this.glowMat);
+        this.eyeL.scale.set(5, 5, 2);
+        this.eyeL.position.set(-8.1, 91, 27);
+        this.eyeL.rotation.set(0, -0.5, 0);
+        this.antBodyGroup.add(this.eyeL);
+
+        this.eyeR = new THREE.Mesh(boxGeo, this.glowMat);
+        this.eyeR.scale.set(5, 5, 2);
+        this.eyeR.position.set(8.1, 91, 27);
+        this.eyeR.rotation.set(0, 0.5, 0);
+        this.antBodyGroup.add(this.eyeR);
+
+        // Add the entire ant body group to the main entity group
+        this.group.add(this.antBodyGroup);
+        this.body = this.antBodyGroup; // Cache reference for jitter/bobbing
+        this.eye = this.eyeL; // Keep reference to avoid breaking code assuming single eye mesh (though updated via glowMat)
+
+        // Helper function to create insect-like gothic arched legs
+        const createEnemyLeg = (side, legIndex) => {
+            const legGroup = new THREE.Group();
+            
+            // Positioning along thorax:
+            // Spaced along Z at offsets: 10, 2, -6, -14
+            const pz = 10 - legIndex * 8;
+            const px = side * 7;
+            const py = 78;
+            legGroup.position.set(px, py, pz);
+            
+            // Thigh (Femur)
+            const thighGroup = new THREE.Group();
+            const thighMesh = new THREE.Mesh(boxGeo, matAntBody);
+            thighMesh.scale.set(2.5, 26, 2.5);
+            thighMesh.position.y = -13; // Pivot at hip joint
+            thighMesh.castShadow = true;
+            thighGroup.add(thighMesh);
+            
+            // Knee to Ankle (Tibia)
+            const kneeGroup = new THREE.Group();
+            kneeGroup.position.set(0, -26, 0); // Positioned at knee joint (bottom of femur)
+            const calfMesh = new THREE.Mesh(boxGeo, matAntBody);
+            calfMesh.scale.set(2, 28, 2);
+            calfMesh.position.y = -14; // Pivot at knee joint
+            calfMesh.castShadow = true;
+            kneeGroup.add(calfMesh);
+            
+            // Ankle to Toes (Tarsus)
+            const ankleGroup = new THREE.Group();
+            ankleGroup.position.set(0, -28, 0); // Positioned at ankle joint (bottom of tibia)
+            const footPartMesh = new THREE.Mesh(boxGeo, matAntBody);
+            footPartMesh.scale.set(1.5, 30, 1.5);
+            footPartMesh.position.y = -15; // Pivot at ankle joint
+            footPartMesh.castShadow = true;
+            ankleGroup.add(footPartMesh);
+            
+            // Toe Tip (glowing segment)
+            const toeGroup = new THREE.Group();
+            toeGroup.position.set(0, -30, 0); // Positioned at toe joint (bottom of tarsus)
+            const toeMesh = new THREE.Mesh(boxGeo, this.glowMat);
+            toeMesh.scale.set(2, 5, 2);
+            toeMesh.position.y = -2.5; // Pivot at toe joint, extends down
+            toeMesh.castShadow = true;
+            toeGroup.add(toeMesh);
+            
+            ankleGroup.add(toeGroup);
+            kneeGroup.add(ankleGroup);
+            thighGroup.add(kneeGroup);
+            legGroup.add(thighGroup);
+            
+            // Base rotations to create insect fanned stance and gothic arches:
+            let fanY = 0;
+            if (legIndex === 0) fanY = 0.5 * side;
+            else if (legIndex === 1) fanY = 0.15 * side;
+            else if (legIndex === 2) fanY = -0.15 * side;
+            else if (legIndex === 3) fanY = -0.65 * side;
+            
+            legGroup.rotation.y = fanY;
+            
+            // Tilt joints to form a nice spider leg arch
+            thighGroup.rotation.z = -0.8 * side; // left points left, right points right
+            kneeGroup.rotation.z = 1.2 * side;  // bends back in
+            ankleGroup.rotation.z = -0.4 * side; // angles out to meet the floor
+            
+            // References for animation
+            legGroup.thigh = thighGroup;
+            legGroup.knee = kneeGroup;
+            legGroup.ankle = ankleGroup;
+            legGroup.toe = toeGroup;
+            
+            // Save base angles
+            legGroup.baseThighRotX = 0;
+            legGroup.baseKneeRotX = 0;
+            legGroup.baseAnkleRotX = 0;
+            
+            return legGroup;
+        };
+
+        // Attach 8 legs
+        this.legsL = [];
+        this.legsR = [];
+        for (let i = 0; i < 4; i++) {
+            let legL = createEnemyLeg(-1, i);
+            let legR = createEnemyLeg(1, i);
+            this.legsL.push(legL);
+            this.legsR.push(legR);
+            this.group.add(legL, legR);
+        }
+
+        this.walkCycle = Math.random() * Math.PI * 2;
+
+        this.group.position.set(this.x, 0, this.y);
+        scene.add(this.group);
+    }
+    update() {
+        let targetX = player.controlDog && bigDog && bigDog.active ? bigDog.x : player.x;
+        let targetY = player.controlDog && bigDog && bigDog.active ? bigDog.y : player.y;
+        let dx = targetX - this.x;
+        let dy = targetY - this.y;
+        let distToTarget = Math.sqrt(dx*dx + dy*dy);
+
+        if (player.controlDog && distToTarget < 800) {
+            this.state = 'chase';
+            this.glowMat.color.setHex(0xf43f5e);
+            this.glowMat.emissive.setHex(0xf43f5e);
+        } else {
+            this.state = 'wander';
+            this.glowMat.color.setHex(0x8b00ff);
+            this.glowMat.emissive.setHex(0x8b00ff);
+        }
+
+        // Animate 8 legs walking with a slow, creepy alternating tetrapod gait (4 legs at a time)
+        this.walkCycle += this.speed * 0.045 * timeScale; // 3x slower walking speed
+        
+        const phaseA = this.walkCycle;
+        const phaseB = this.walkCycle + Math.PI;
+
+        for (let i = 0; i < 4; i++) {
+            const legL = this.legsL[i];
+            const legR = this.legsR[i];
+            
+            // Alternating legs phase: Left legs alternate L0(A), L1(B), L2(A), L3(B)
+            const phaseL = (i % 2 === 0) ? phaseA : phaseB;
+            // Right legs alternate opposite: R0(B), R1(A), R2(B), R3(A)
+            const phaseR = (i % 2 === 0) ? phaseB : phaseA;
+            
+            const swingL = Math.sin(phaseL);
+            const swingR = Math.sin(phaseR);
+            
+            // Thigh swings forward and backward
+            legL.thigh.rotation.x = swingL * 0.35;
+            legR.thigh.rotation.x = swingR * 0.35;
+            
+            // Lift swinging-forward legs slightly off ground, bend knees/ankles
+            // Left leg
+            if (swingL > 0) {
+                legL.knee.rotation.x = legL.baseKneeRotX - swingL * 0.4;
+                legL.position.y = 78 + swingL * 6;
+                legL.ankle.rotation.x = legL.baseAnkleRotX + swingL * 0.2;
+            } else {
+                legL.knee.rotation.x = legL.baseKneeRotX;
+                legL.position.y = 78;
+                legL.ankle.rotation.x = legL.baseAnkleRotX;
+            }
+            
+            // Right leg
+            if (swingR > 0) {
+                legR.knee.rotation.x = legR.baseKneeRotX - swingR * 0.4;
+                legR.position.y = 78 + swingR * 6;
+                legR.ankle.rotation.x = legR.baseAnkleRotX + swingR * 0.2;
+            } else {
+                legR.knee.rotation.x = legR.baseKneeRotX;
+                legR.position.y = 78;
+                legR.ankle.rotation.x = legR.baseAnkleRotX;
+            }
+        }
+        
+        // Body bobbing/jitter when moving (relative to its local coordinate system, Y base is 0)
+        if (this.body) {
+            this.body.position.y = Math.sin(this.walkCycle * 4) * 1.5;
+            this.body.rotation.z = Math.sin(this.walkCycle * 2) * 0.05;
+        }
+
+        if (this.state === 'chase' && player.health > 0) {
+            let dxMove = (dx/distToTarget) * this.speed * timeScale;
+            let dyMove = (dy/distToTarget) * this.speed * timeScale;
+            if (!checkBuildingCollision(this.x + dxMove, this.y, this.size/2)) this.x += dxMove;
+            if (!checkBuildingCollision(this.x, this.y + dyMove, this.size/2)) this.y += dyMove;
+            this.group.rotation.y = Math.atan2(dx, dy);
+
+            if (distToTarget < 400 && Date.now() - this.lastShot > (1000 + Math.random()*1000) / timeScale) {
+                projectiles.push(new Projectile(this.x, this.y, dx/distToTarget, dy/distToTarget, false));
+                this.lastShot = Date.now();
+            }
+        } else {
+            let dxMove = Math.cos(this.angle) * this.speed * 0.5 * timeScale;
+            let dyMove = Math.sin(this.angle) * this.speed * 0.5 * timeScale;
+            
+            if (checkBuildingCollision(this.x + dxMove, this.y + dyMove, this.size/2)) {
+                this.angle += (Math.PI/2 + (Math.random()-0.5)) * timeScale; // bounce off wall
+            } else {
+                this.x += dxMove;
+                this.y += dyMove;
+            }
+
+            if (Math.random() < 0.02 * timeScale) this.angle += (Math.random() - 0.5);
+            
+            if (this.x < 0 || this.x > WORLD_W) this.angle = Math.PI - this.angle;
+            if (this.y < 0 || this.y > WORLD_H) this.angle = -this.angle;
+
+            this.group.rotation.y = Math.atan2(Math.cos(this.angle), Math.sin(this.angle));
+        }
+
+        this.group.position.set(this.x, 0, this.y);
+
+        let hitSize = player.controlDog ? 10 : player.radius;
+        if (player.controlDog && distToTarget < this.size/2 + hitSize && player.health > 0) {
+            player.health -= 0.5 * timeScale;
+            updateHUD();
+        }
+    }
+    destroy() {
+        scene.remove(this.group);
+        if (this.glowMat) this.glowMat.dispose();
+    }
+}
+
+class Projectile {
+    constructor(x, y, dx, dy, isPlayer) {
+        this.x = x;
+        this.y = y;
+        this.dx = dx;
+        this.dy = dy;
+        this.speed = 12;
+        this.isPlayer = isPlayer;
+        this.life = 100;
+        
+        let color = isPlayer ? 0x00f0ff : 0xf59e0b; // Bright cyan neon vs enemy orange
+        let mat = new THREE.MeshBasicMaterial({ color: color });
+        
+        if (this.isPlayer) {
+            // Neon cyan spinning triangle (cone with 3 radial segments)
+            this.mesh = new THREE.Mesh(coneGeo, mat);
+            this.mesh.scale.set(6, 12, 6);
+            // Spawn from the dog's chest/head height (around Y = 86)
+            this.mesh.position.set(this.x, 86, this.y);
+        } else {
+            // Normal box bullet for enemies
+            this.mesh = new THREE.Mesh(boxGeo, mat);
+            this.mesh.scale.set(8, 8, 8);
+            this.mesh.position.set(this.x, 20, this.y);
+        }
+        scene.add(this.mesh);
+    }
+    update() {
+        this.x += this.dx * this.speed * timeScale;
+        this.y += this.dy * this.speed * timeScale;
+        this.mesh.position.set(this.x, this.mesh.position.y, this.y); // Keep the Y position of the mesh!
+        this.life -= timeScale;
+        
+        if (this.isPlayer) {
+            // Spin the triangle in space
+            this.mesh.rotation.x += 0.08 * timeScale;
+            this.mesh.rotation.y += 0.12 * timeScale;
+            this.mesh.rotation.z += 0.05 * timeScale;
+        }
+        
+        if (checkBuildingCollision(this.x, this.y, 4)) {
+            this.life = 0; // kill projectile on wall hit
+        }
+    }
+    destroy() {
+        scene.remove(this.mesh);
+    }
+}
+
+class Particle {
+    constructor(x, y, colorHex, spawnZ) {
+        this.x = x;
+        this.y = y;
+        this.z = spawnZ !== undefined ? spawnZ : 10 + Math.random() * 20;
+        let angle = Math.random() * Math.PI * 2;
+        let speed = Math.random() * 8 + 2;
+        this.dx = Math.cos(angle) * speed;
+        this.dy = Math.sin(angle) * speed;
+        this.dz = (Math.random() - 0.2) * 8;
+        this.life = 30 + Math.random() * 20;
+        
+        let mat = new THREE.MeshBasicMaterial({ color: colorHex });
+        this.mesh = new THREE.Mesh(boxGeo, mat);
+        this.mesh.scale.set(6, 6, 6);
+        this.mesh.position.set(this.x, this.z, this.y);
+        scene.add(this.mesh);
+    }
+    update() {
+        this.x += this.dx * timeScale;
+        this.y += this.dy * timeScale;
+        this.z += this.dz * timeScale;
+        this.dz -= 0.5 * timeScale; // gravity
+        if (this.z < 0) this.z = 0;
+        
+        this.mesh.position.set(this.x, this.z, this.y);
+        this.mesh.scale.multiplyScalar(1 - 0.05 * timeScale);
+        this.life -= timeScale;
+    }
+    destroy() {
+        scene.remove(this.mesh);
+    }
+}
+
+class Building {
+    constructor(x, y, w, h, overrideHeight) {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        
+        let height = overrideHeight !== undefined ? overrideHeight : 100 + Math.random() * 300;
+        this.height = height; // Cache for rubber effect resets
+        
+        let colorHex = buildingPalette[Math.floor(Math.random() * buildingPalette.length)];
+        
+        this.bMat = new THREE.MeshStandardMaterial({ 
+            color: colorHex, 
+            map: buildingTexture,
+            emissiveMap: buildingTexture,
+            emissive: 0x000000,
+            metalness: 0.1, 
+            roughness: 0.9 
+        });
+        
+        this.mesh = new THREE.Mesh(boxGeo, this.bMat);
+        this.mesh.scale.set(w, height, h);
+        this.mesh.position.set(x + w/2, height/2, y + h/2);
+        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
+        
+        // Edge highlighting (wireframe) - bright white for Joy Division aesthetic
+        const edges = new THREE.EdgesGeometry(boxGeo);
+        this.line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 }));
+        this.line.scale.set(w, height, h);
+        this.line.position.copy(this.mesh.position);
+        
+        // Determine base color based on grid column to match floor
+        let colIdx = Math.max(0, Math.min(19, Math.floor(this.x / (WORLD_W / 20))));
+        this.glowColor = new THREE.Color(`hsl(${colIdx * (360/20)}, 100%, 50%)`);
+        
+        scene.add(this.mesh);
+        scene.add(this.line);
+    }
+    
+    update() {
+        // Mesh position Z is the 2D Y coordinate
+        let dx = this.mesh.position.x - player.x;
+        let dy = this.mesh.position.z - player.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        
+        let glowRadius = 500;
+        if (dist < glowRadius) {
+            let intensity = Math.pow(1 - (dist / glowRadius), 2); // Squared for smoother falloff
+            this.bMat.emissive.copy(this.glowColor);
+            this.bMat.emissiveIntensity = intensity * 1.5; // Strong glow
+        } else {
+            this.bMat.emissiveIntensity = 0;
+        }
+
+        // Effect 7: Tron Mode color cycling
+        if (effectTronMode) {
+            let time = Date.now() * 0.003 * timeScale;
+            let factor = 0.5 + 0.5 * Math.sin(time + this.x * 0.005 + this.y * 0.005);
+            this.line.material.color.copy(tronCyan).lerp(tronPink, factor);
+        }
+
+        // Effect 2: Rubber deformation
+        if (effectRubberBuildings) {
+            let time = Date.now() * 0.003;
+            // Wobble scale and height using spatial waves
+            let scaleY = this.height * (1 + 0.35 * Math.sin(time + this.x * 0.01 + this.y * 0.01));
+            this.mesh.scale.y = scaleY;
+            this.mesh.position.y = scaleY / 2;
+            
+            // Sync wireframe line scale
+            this.line.scale.y = scaleY;
+            this.line.position.y = scaleY / 2;
+
+            // Wobble rotations (bending)
+            let rotZ = 0.08 * Math.sin(time * 1.2 + this.x * 0.01);
+            let rotX = 0.08 * Math.cos(time * 1.2 + this.y * 0.01);
+            
+            this.mesh.rotation.z = rotZ;
+            this.mesh.rotation.x = rotX;
+            this.line.rotation.z = rotZ;
+            this.line.rotation.x = rotX;
+        }
+    }
+}
+
+class Collectable {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = 15;
+        this.mesh = new THREE.Mesh(boxGeo, matCollectable);
+        this.mesh.scale.set(this.size, this.size, this.size);
+        this.mesh.position.set(this.x, 15, this.y);
+        this.mesh.castShadow = true;
+        scene.add(this.mesh);
+    }
+    update() {
+        this.mesh.rotation.y += 0.05;
+        this.mesh.rotation.x += 0.03;
+        this.mesh.position.y = 15 + Math.sin(Date.now() * 0.005) * 5; // hover
+    }
+    destroy() {
+        scene.remove(this.mesh);
+    }
+}
+
+class HealthPack {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = 15;
+        this.group = new THREE.Group();
+        this.group.position.set(this.x, 10, this.y);
+        
+        // White medical box body
+        const crateMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.1 });
+        const crate = new THREE.Mesh(boxGeo, crateMat);
+        crate.scale.set(12, 12, 12);
+        crate.castShadow = true;
+        crate.receiveShadow = true;
+        this.group.add(crate);
+        
+        // Glowing red cross
+        const crossMat = new THREE.MeshStandardMaterial({ 
+            color: 0xef4444, 
+            emissive: 0xef4444, 
+            emissiveIntensity: 0.8,
+            roughness: 0.2
+        });
+        this.crossGroup = new THREE.Group();
+        this.crossGroup.position.set(0, 11, 0); // floats above the crate
+        
+        const barH = new THREE.Mesh(boxGeo, crossMat);
+        barH.scale.set(8, 2.2, 2.2);
+        const barV = new THREE.Mesh(boxGeo, crossMat);
+        barV.scale.set(2.2, 8, 2.2);
+        this.crossGroup.add(barH, barV);
+        this.group.add(this.crossGroup);
+        
+        scene.add(this.group);
+    }
+    update() {
+        // Rotate the floating cross
+        this.crossGroup.rotation.y += 0.04;
+        // Crate hovers slightly
+        this.group.position.y = 10 + Math.sin(Date.now() * 0.004) * 3;
+    }
+    destroy() {
+        scene.remove(this.group);
+    }
+}
+
+// Global Entities
+let player;
+let bigDog;
+let smoothCamDirX = 0;
+let smoothCamDirZ = 1;
+let cameraYaw = 0;
+let cameraPitch = 0.3; // radians looking slightly down
+let enemies = [];
+let projectiles = [];
+let particles = [];
+let healthPacks = [];
+let lastHealthPackSpawn = 0;
+let buildings = [];
+let collectables = [];
+let lastCollectableSpawn = 0;
+let empEffectRadius = 0;
+let empActive = false;
+let gameState = 'playing';
+let empMesh;
+let boundaryWalls = [];
+
+// Progression & Difficulty Scaling
+let currentLevel = 1;
+let currentProgress = 0;
+let progressTarget = 3;
+
+let screenShakeTimeout = null;
+function triggerAutoScreenShake(durationMs) {
+    effectScreenShake = true;
+    updateEffectsHUD();
+    if (screenShakeTimeout) clearTimeout(screenShakeTimeout);
+    screenShakeTimeout = setTimeout(() => {
+        effectScreenShake = false;
+        updateEffectsHUD();
+    }, durationMs);
+}
+
+function levelUp() {
+    currentLevel++;
+    currentProgress = 0;
+    progressTarget = 2 + currentLevel; // Level 2: 4 cubes, Level 3: 5 cubes, etc.
+    
+    // Level up visual notification banner
+    if (uiLevelUpBanner) {
+        uiLevelUpBanner.textContent = `LEVEL ${currentLevel}`;
+        uiLevelUpBanner.classList.remove('hidden');
+        
+        // Force Reflow to restart CSS Animation
+        uiLevelUpBanner.style.animation = 'none';
+        uiLevelUpBanner.offsetHeight; 
+        uiLevelUpBanner.style.animation = null;
+        
+        setTimeout(() => {
+            uiLevelUpBanner.classList.add('hidden');
+        }, 2000);
+    }
+    
+    // Rewards
+    player.health = player.maxHealth; // Full health restore!
+    bigDog.dogScale += 0.2; // Extra dog growth reward
+    
+    // Difficulty Scaling: Increase Speed on all existing enemies
+    let extraSpeed = (currentLevel - 1) * 0.35;
+    enemies.forEach(e => {
+        e.speed = (1.5 + Math.random()) + extraSpeed;
+    });
+    
+    // Difficulty Scaling: Spawn extra enemies
+    let spawnCount = 3;
+    for (let i = 0; i < spawnCount; i++) {
+        let ex, ey;
+        let attempts = 0;
+        do {
+            ex = Math.random() * WORLD_W;
+            ey = Math.random() * WORLD_H;
+            attempts++;
+        } while (attempts < 100 && checkBuildingCollision(ex, ey, 25));
+        enemies.push(new Enemy(ex, ey));
+    }
+    
+    // Visual flash/shake impact
+    triggerAutoScreenShake(1000);
+    updateHUD();
+}
+
+function init() {
+    // Clean up previous scene objects
+    if (player) player.destroy();
+    if (bigDog) bigDog.destroy();
+    enemies.forEach(e => e.destroy());
+    projectiles.forEach(p => p.destroy());
+    particles.forEach(p => p.destroy());
+    collectables.forEach(c => c.destroy());
+    if (healthPacks) healthPacks.forEach(h => h.destroy());
+    if (empMesh) scene.remove(empMesh);
+    
+    // Clean up previous boundary walls
+    boundaryWalls.forEach(w => {
+        scene.remove(w.mesh);
+        scene.remove(w.line);
+    });
+    boundaryWalls = [];
+    
+    // Reset arrays (Note: Buildings remain the same to avoid rebuilding geometry)
+    enemies = [];
+    projectiles = [];
+    particles = [];
+    collectables = [];
+    healthPacks = [];
+    lastCollectableSpawn = Date.now();
+    lastHealthPackSpawn = Date.now();
+    empEffectRadius = 0;
+    empActive = false;
+    gameState = 'playing';
+    
+    // Reset progression state
+    currentLevel = 1;
+    currentProgress = 0;
+    progressTarget = 3;
+    
+    player = new Player();
+    bigDog = new BigDog();
+
+    // Create boundary walls
+    const wallHeight = 250;
+    const wallThickness = 20;
+    const wallMat = new THREE.MeshStandardMaterial({
+        color: 0x090d16, // Very dark tech color
+        transparent: true,
+        opacity: 0.75,
+        metalness: 0.9,
+        roughness: 0.1
+    });
+
+    const wallSpecs = [
+        // Left wall
+        { x: -wallThickness/2, z: WORLD_H/2, w: wallThickness, h: WORLD_H + wallThickness*2 },
+        // Right wall
+        { x: WORLD_W + wallThickness/2, z: WORLD_H/2, w: wallThickness, h: WORLD_H + wallThickness*2 },
+        // Top wall
+        { x: WORLD_W/2, z: -wallThickness/2, w: WORLD_W + wallThickness*2, h: wallThickness },
+        // Bottom wall
+        { x: WORLD_W/2, z: WORLD_H + wallThickness/2, w: WORLD_W + wallThickness*2, h: wallThickness }
+    ];
+
+    wallSpecs.forEach((spec, idx) => {
+        const mesh = new THREE.Mesh(boxGeo, wallMat);
+        mesh.scale.set(spec.w, wallHeight, spec.h);
+        mesh.position.set(spec.x, wallHeight/2, spec.z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        const edges = new THREE.EdgesGeometry(boxGeo);
+        // Alternating neon pink/cyan borders to match the UI visual effects
+        const colorHex = idx % 2 === 0 ? 0xa855f7 : 0x06b6d4;
+        const lineMat = new THREE.LineBasicMaterial({
+            color: colorHex,
+            transparent: true,
+            opacity: 0.9
+        });
+        const line = new THREE.LineSegments(edges, lineMat);
+        line.scale.set(spec.w, wallHeight, spec.h);
+        line.position.copy(mesh.position);
+
+        scene.add(mesh);
+        scene.add(line);
+        boundaryWalls.push({ mesh, line, baseColor: new THREE.Color(colorHex) });
+    });
+    
+    if (buildings.length === 0) {
+        const numRows = 15;
+        const colsPerRow = 20;
+        const spacingX = WORLD_W / colsPerRow;
+        const spacingY = WORLD_H / numRows;
+        
+        for (let r = 0; r < numRows; r++) {
+            let rowY = r * spacingY + (Math.random() * spacingY * 0.1);
+            for (let c = 0; c < colsPerRow; c++) {
+                let colX = c * spacingX + (Math.random() * spacingX * 0.1);
+                
+                // Gaussian curve based on distance from center X
+                let distFromCenterX = Math.abs(colX - WORLD_W/2);
+                let bell = Math.exp(-(distFromCenterX * distFromCenterX) / 500000); 
+                
+                // Add noise for jagged peaks
+                let noise = Math.random() * 0.8 + 0.2; 
+                
+                // Base height + curve height (Much lower now)
+                let height = 10 + (bell * noise * 300);
+                
+                let w = spacingX * 0.45; // Much wider gaps for navigation
+                let h = spacingY * 0.45;
+                
+                // Leave a spawn clearing in the very center
+                if (Math.abs(colX - WORLD_W/2) < 250 && Math.abs(rowY - WORLD_H/2) < 250) {
+                    continue; 
+                }
+                
+                buildings.push(new Building(colX, rowY, w, h, height));
+            }
+        }
+    }
+
+    for(let i=0; i<15; i++) {
+        let ex, ey;
+        let attempts = 0;
+        do {
+            ex = Math.random() * WORLD_W;
+            ey = Math.random() * WORLD_H;
+            attempts++;
+        } while (attempts < 100 && checkBuildingCollision(ex, ey, 25)); // Enemy size is 50, so radius 25
+        
+        enemies.push(new Enemy(ex, ey));
+    }
+
+    // Spawn initial health packs
+    for(let i=0; i<5; i++) {
+        let hx, hy;
+        let attempts = 0;
+        do {
+            hx = Math.random() * WORLD_W;
+            hy = Math.random() * WORLD_H;
+            attempts++;
+        } while (attempts < 100 && checkBuildingCollision(hx, hy, 20));
+        healthPacks.push(new HealthPack(hx, hy));
+    }
+
+    // EMP Mesh setup
+    const empGeo = new THREE.SphereGeometry(1, 32, 32);
+    const empMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, wireframe: true });
+    empMesh = new THREE.Mesh(empGeo, empMat);
+    empMesh.visible = false;
+    scene.add(empMesh);
+
+    uiGameOver.classList.add('hidden');
+    updateHUD();
+}
+
+function updateHUD() {
+    if (uiLevel) uiLevel.textContent = currentLevel;
+    if (uiProgress) uiProgress.textContent = `${currentProgress} / ${progressTarget}`;
+
+    if (player.controlDog) {
+        uiMode.textContent = 'ROBO DOG';
+        uiMode.className = 'value text-mech';
+        uiEMP.textContent = player.empReady ? 'READY (Press E/X)' : 'OFFLINE';
+    } else {
+        uiMode.textContent = 'ON FOOT (STEALTH)';
+        uiMode.className = 'value text-accent';
+        uiEMP.textContent = 'ROBO DOG REQUIRED';
+    }
+
+    let hpPct = Math.max(0, (player.health / player.maxHealth) * 100);
+    uiHealth.style.width = hpPct + '%';
+    uiHealth.className = 'health-bar-fill';
+    if (hpPct < 30) uiHealth.classList.add('critical');
+    else if (hpPct < 60) uiHealth.classList.add('warning');
+}
+
+function fireEMP() {
+    empActive = true;
+    player.empReady = false;
+    player.lastEmpTime = Date.now();
+    empEffectRadius = 0;
+    let originMesh = (player.controlDog && bigDog && bigDog.active) ? bigDog.group : player.group;
+    empMesh.position.copy(originMesh.position);
+    empMesh.visible = true;
+    updateHUD();
+    triggerAutoScreenShake(4000); // 4-second shake during EMP pulse
+}
+
+function evaluateAutoEffects() {
+    if (gameState !== 'playing') {
+        // Reset everything on Game Over / Idle to restore normal visuals
+        effectFloorFlash = false;
+        effectFloorScroll = false;
+        effectFilmNoir = false;
+        effectRubberBuildings = false;
+        effectCamZoom = false;
+        effectTimeDilation = false;
+        timeScale = 1.0;
+        effectCameraRoll = false;
+        effectTronMode = false;
+        
+        const vignette = document.getElementById('vignette-overlay');
+        if (vignette) vignette.classList.remove('active');
+        if (ambientLight) ambientLight.intensity = 0.4;
+        if (groundMat) groundMat.color.setHex(0xffffff);
+        if (camera) camera.up.set(0, 1, 0);
+        return;
+    }
+
+    // 1. Mode-based triggers
+    if (player && player.controlDog) {
+        effectFloorFlash = true;
+        effectFloorScroll = true;
+        effectFilmNoir = false;
+    } else {
+        effectFloorFlash = false;
+        effectFloorScroll = false;
+        effectFilmNoir = true;
+    }
+
+    // 2. Health-based hallucinations (< 40% health)
+    if (player && player.health < 40 && player.health > 0) {
+        effectRubberBuildings = true;
+        effectCamZoom = true;
+    } else {
+        effectRubberBuildings = false;
+        effectCamZoom = false;
+    }
+
+    // 3. Critical health slowdown (< 20% health)
+    if (player && player.health < 20 && player.health > 0) {
+        effectTimeDilation = true;
+        timeScale = 0.20;
+        effectCameraRoll = true;
+    } else {
+        effectTimeDilation = false;
+        timeScale = 1.0;
+        effectCameraRoll = false;
+        if (camera) camera.up.set(0, 1, 0); // Reset camera tilt
+    }
+
+    // 4. EMP visual overrides
+    if (empActive) {
+        effectTronMode = true;
+    } else {
+        effectTronMode = false;
+    }
+
+    // Apply the high-performance vignette overlay and dim lighting for stealth (cheap!)
+    const vignette = document.getElementById('vignette-overlay');
+    if (effectFilmNoir) {
+        if (vignette) vignette.classList.add('active');
+        if (ambientLight) ambientLight.intensity = 0.15; // Dark stealth lighting
+    } else {
+        if (vignette) vignette.classList.remove('active');
+        if (ambientLight) ambientLight.intensity = 0.4;  // Normal action lighting
+    }
+
+    // Sync neon strobes / wireframes
+    if (groundMat && !effectFloorFlash) {
+        groundMat.color.setHex(0xffffff);
+    }
+    
+    if (buildings) {
+        buildings.forEach(b => {
+            b.mesh.visible = !effectTronMode;
+            if (!effectTronMode && b.line) {
+                b.line.material.color.setHex(0xffffff);
+            }
+        });
+    }
+
+    updateEffectsHUD();
+}
+
+function update() {
+    updateGamepad();
+    evaluateAutoEffects();
+
+    if (gameState === 'playing') {
+        player.update();
+        bigDog.update();
+
+        if (player.health <= 0) {
+            gameState = 'gameover';
+            gameOverTitle.textContent = "MECH DESTROYED";
+            gameOverTitle.style.color = "#ef4444";
+            gameOverMessage.textContent = "The AI swarm was too much.";
+            uiGameOver.classList.remove('hidden');
+        }
+
+        if (empActive) {
+            empEffectRadius += 30;
+            empMesh.scale.set(empEffectRadius, empEffectRadius, empEffectRadius);
+            empMesh.material.opacity = Math.max(0, 1 - empEffectRadius/2000);
+
+            if (empEffectRadius > 2000) {
+                empActive = false;
+                empMesh.visible = false;
+                // No more Game Over here!
+            }
+            
+            for(let i=enemies.length-1; i>=0; i--) {
+                let e = enemies[i];
+                let dx = e.x - player.x;
+                let dy = e.y - player.y;
+                if (Math.sqrt(dx*dx + dy*dy) < empEffectRadius) {
+                    for(let j=0; j<15; j++) particles.push(new Particle(e.x, e.y, 0xf43f5e, 84));
+                    e.destroy();
+                    enemies.splice(i, 1);
+                }
+            }
+            
+            let dx = bigDog.x - player.x;
+            let dy = bigDog.y - player.y;
+            if (Math.sqrt(dx*dx + dy*dy) < empEffectRadius && bigDog.active && !bigDog.isParachuting) {
+                bigDog.active = false;
+                for(let j=0; j<20; j++) particles.push(new Particle(bigDog.x, bigDog.y, 0xfbbf24, 84));
+            }
+        }
+        
+        // EMP Cooldown Logic
+        if (!player.empReady && !empActive) {
+            let elapsed = Date.now() - player.lastEmpTime;
+            if (elapsed > 10000) {
+                player.empReady = true;
+                if (!bigDog.active) {
+                    // Respawn Big Dog with Parachute
+                    bigDog.active = true;
+                    bigDog.dogScale = 1.0;
+                    bigDog.altitude = 600;
+                    bigDog.isParachuting = true;
+                    bigDog.x = player.x + 30;
+                    bigDog.y = player.y + 30;
+                }
+                updateHUD();
+            } else {
+                let timeLeft = 10 - Math.floor(elapsed / 1000);
+                uiEMP.textContent = `RECHARGING... (${timeLeft}s)`;
+            }
+        }
+        
+        // Spawn Collectables
+        if (Date.now() - lastCollectableSpawn > 5000) {
+            let cx, cy;
+            let attempts = 0;
+            do {
+                cx = Math.random() * WORLD_W;
+                cy = Math.random() * WORLD_H;
+                attempts++;
+            } while (attempts < 100 && checkBuildingCollision(cx, cy, 20));
+            collectables.push(new Collectable(cx, cy));
+            lastCollectableSpawn = Date.now();
+        }
+        
+        // Update Collectables & Player Collision
+        for (let i = collectables.length - 1; i >= 0; i--) {
+            let c = collectables[i];
+            c.update();
+            let checkX = player.controlDog && bigDog && bigDog.active ? bigDog.x : player.x;
+            let checkY = player.controlDog && bigDog && bigDog.active ? bigDog.y : player.y;
+            let dx = checkX - c.x;
+            let dy = checkY - c.y;
+            let radius = player.controlDog ? 10 : player.radius;
+            if (Math.sqrt(dx*dx + dy*dy) < radius + c.size) {
+                bigDog.dogScale += 0.1; // Big dog grows!
+                for(let k=0; k<15; k++) particles.push(new Particle(c.x, c.y, 0x10b981, 15));
+                c.destroy();
+                collectables.splice(i, 1);
+                
+                // Progression logic
+                currentProgress++;
+                if (currentProgress >= progressTarget) {
+                    levelUp();
+                } else {
+                    updateHUD();
+                }
+            }
+        }
+
+        // Spawn Health Packs
+        if (Date.now() - lastHealthPackSpawn > 15000) {
+            let hx, hy;
+            let attempts = 0;
+            do {
+                hx = Math.random() * WORLD_W;
+                hy = Math.random() * WORLD_H;
+                attempts++;
+            } while (attempts < 100 && checkBuildingCollision(hx, hy, 20));
+            healthPacks.push(new HealthPack(hx, hy));
+            lastHealthPackSpawn = Date.now();
+        }
+
+        // Update Health Packs & Player Collision
+        for (let i = healthPacks.length - 1; i >= 0; i--) {
+            let h = healthPacks[i];
+            h.update();
+            let checkX = player.controlDog && bigDog && bigDog.active ? bigDog.x : player.x;
+            let checkY = player.controlDog && bigDog && bigDog.active ? bigDog.y : player.y;
+            let dx = checkX - h.x;
+            let dy = checkY - h.y;
+            let radius = player.controlDog ? 10 : player.radius;
+            if (Math.sqrt(dx*dx + dy*dy) < radius + h.size) {
+                // Restore 50% health (50 points)
+                player.health = Math.min(player.maxHealth, player.health + 50);
+                
+                // Spawn glowing red/white particles on pickup
+                for(let k=0; k<15; k++) {
+                    let pColor = k % 2 === 0 ? 0xffffff : 0xef4444;
+                    particles.push(new Particle(h.x, h.y, pColor, 10));
+                }
+                
+                h.destroy();
+                healthPacks.splice(i, 1);
+                updateHUD();
+            }
+        }
+
+        enemies.forEach(e => e.update());
+        buildings.forEach(b => b.update());
+        
+        boundaryWalls.forEach((w, index) => {
+            let time = Date.now() * 0.003;
+            // Pulse boundary neon lines
+            w.line.material.opacity = 0.7 + 0.3 * Math.sin(time + index);
+            
+            if (effectTronMode) {
+                let factor = 0.5 + 0.5 * Math.sin(time + index);
+                w.line.material.color.copy(tronCyan).lerp(tronPink, factor);
+            } else {
+                w.line.material.color.copy(w.baseColor);
+            }
+        });
+        
+        for(let i=projectiles.length-1; i>=0; i--) {
+            let p = projectiles[i];
+            p.update();
+            if (p.life <= 0) {
+                p.destroy();
+                projectiles.splice(i, 1);
+                continue;
+            }
+
+            if (p.isPlayer) {
+                for(let j=enemies.length-1; j>=0; j--) {
+                    let e = enemies[j];
+                    let dx = e.x - p.x;
+                    let dy = e.y - p.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < e.size/2) {
+                        e.health -= 10;
+                        p.destroy();
+                        projectiles.splice(i, 1);
+                        // Spawn particles at correct bullet hit height
+                        for(let k=0; k<5; k++) particles.push(new Particle(p.x, p.y, 0xf59e0b, p.mesh.position.y));
+                        if (e.health <= 0) {
+                            for(let k=0; k<20; k++) particles.push(new Particle(e.x, e.y, 0xef4444, 84));
+                            e.destroy();
+                            enemies.splice(j, 1);
+                        }
+                        break;
+                    }
+                }
+            } else {
+                if (player.controlDog && player.health > 0) {
+                    let dx = bigDog.x - p.x;
+                    let dy = bigDog.y - p.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 15) { // Hitbox size for dog
+                        player.health -= 5;
+                        updateHUD();
+                        p.destroy();
+                        projectiles.splice(i, 1);
+                        // Spawn particles at correct bullet hit height
+                        for(let k=0; k<5; k++) particles.push(new Particle(p.x, p.y, 0x38bdf8, p.mesh.position.y));
+                        triggerAutoScreenShake(300); // Shake screen on hit impact
+                    }
+                }
+            }
+        }
+
+        for(let i=particles.length-1; i>=0; i--) {
+            particles[i].update();
+            if (particles[i].life <= 0) {
+                particles[i].destroy();
+                particles.splice(i, 1);
+            }
+        }
+
+        // Effect 1: Floor hue cycle
+        if (effectFloorFlash && groundMat) {
+            let hue = (Date.now() / 800) % 1;
+            groundMat.color.setHSL(hue, 1.0, 0.6);
+        }
+
+        // Effect 5: Fractal texture update
+        if (effectFractals) {
+            animateFractalTexture();
+        }
+
+        // Effect 6: Hyperspace Floor Scroll
+        if (effectFloorScroll && groundMat && groundMat.map) {
+            groundMat.map.offset.x += 0.02 * timeScale;
+            groundMat.map.offset.y += 0.02 * timeScale;
+        }
+
+        // Effect 10: Dizzy Camera Roll
+        if (effectCameraRoll) {
+            let angle = Math.sin(Date.now() * 0.0025) * 0.35;
+            camera.up.set(Math.sin(angle), Math.cos(angle), 0).normalize();
+        }
+
+        // Camera follow
+        let checkX = player.controlDog && bigDog && bigDog.active ? bigDog.x : player.x;
+        let checkY = player.controlDog && bigDog && bigDog.active ? bigDog.y : player.y;
+
+        let targetCamX = checkX;
+        let targetCamY = camDistance;
+        let targetCamZ = checkY + camDistance;
+        let lookTarget = new THREE.Vector3(checkX, 20, checkY);
+
+        if (!effectCamZoom) {
+            // Over-the-shoulder orbiting camera (Started main camera)
+            // Make base camera 2x further (260 vs 130) and scale further as the dog grows
+            let targetDist = 260 * (bigDog ? bigDog.dogScale : 1.0);
+            if (camDistance < targetDist) {
+                camDistance = Math.min(targetDist, camDistance + 5.0);
+            } else {
+                camDistance = Math.max(targetDist, camDistance - 5.0);
+            }
+            
+            const targetDirX = Math.sin(cameraYaw);
+            const targetDirZ = Math.cos(cameraYaw);
+            
+            // Lerp the direction vector for ultra-smooth orbiting (prevents angular snapping)
+            smoothCamDirX += (targetDirX - smoothCamDirX) * 0.08;
+            smoothCamDirZ += (targetDirZ - smoothCamDirZ) * 0.08;
+            
+            const len = Math.sqrt(smoothCamDirX * smoothCamDirX + smoothCamDirZ * smoothCamDirZ);
+            const forwardX = len > 0 ? smoothCamDirX / len : 0;
+            const forwardZ = len > 0 ? smoothCamDirZ / len : 1;
+            
+            const rightX = forwardZ;
+            const rightZ = -forwardX;
+            
+            const pitchCos = Math.cos(cameraPitch);
+            const pitchSin = Math.sin(cameraPitch);
+            
+            // Position behind and slightly to the right (over the shoulder)
+            targetCamX = checkX - forwardX * (camDistance * pitchCos) + rightX * 18;
+            targetCamZ = checkY - forwardZ * (camDistance * pitchCos) + rightZ * 18;
+            targetCamY = 50 + camDistance * pitchSin; // Adjust height based on pitch
+            
+            // Look ahead of the player at height
+            lookTarget.set(
+                checkX + forwardX * 60,
+                70,
+                checkY + forwardZ * 60
+            );
+        } else {
+            // Isometric / Overhead view (Zoom effect)
+            // Make base camera 2x further (800 vs 400) and scale further as the dog grows
+            let targetDist = 800 * (bigDog ? bigDog.dogScale : 1.0);
+            if (camDistance < targetDist) {
+                camDistance = Math.min(targetDist, camDistance + 6.0);
+            } else {
+                camDistance = Math.max(targetDist, camDistance - 6.0);
+            }
+            targetCamX = checkX;
+            targetCamY = camDistance;
+            targetCamZ = checkY + camDistance;
+            lookTarget.set(checkX, 20, checkY);
+        }
+
+        camera.position.x += (targetCamX - camera.position.x) * 0.1;
+        camera.position.y += (targetCamY - camera.position.y) * 0.1;
+        camera.position.z += (targetCamZ - camera.position.z) * 0.1;
+
+        if (effectScreenShake) {
+            let shakeIntensity = 12.0;
+            camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+            camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+            camera.position.z += (Math.random() - 0.5) * shakeIntensity;
+            camera.lookAt(
+                lookTarget.x + (Math.random() - 0.5) * shakeIntensity * 0.5,
+                lookTarget.y + (Math.random() - 0.5) * shakeIntensity * 0.5,
+                lookTarget.z + (Math.random() - 0.5) * shakeIntensity * 0.5
+            );
+        } else {
+            camera.lookAt(lookTarget);
+        }
+        
+        // Follow light
+        dirLight.position.set(camera.position.x + 100, 500, camera.position.z - 200);
+
+    } else {
+        if (gameState === 'gameover') {
+            // Climb high into the sky
+            const targetCamX = player.x;
+            const targetCamY = 1200; // high above
+            const targetCamZ = player.y + 200; // slightly offset in Z to keep looking at player from angle
+            
+            camera.position.x += (targetCamX - camera.position.x) * 0.03;
+            camera.position.y += (targetCamY - camera.position.y) * 0.03;
+            camera.position.z += (targetCamZ - camera.position.z) * 0.03;
+            
+            camera.lookAt(player.x, 0, player.y);
+            
+            // Keep updating directional light so shadows adjust
+            dirLight.position.set(camera.position.x + 100, 500, camera.position.z - 200);
+
+            // Also continue updating particles during gameover for a nice explosion decay
+            for(let i=particles.length-1; i>=0; i--) {
+                particles[i].update();
+                if (particles[i].life <= 0) {
+                    particles[i].destroy();
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        if (keys['KeyR'] || justPressed(9) || justPressed(0)) {
+            init();
+        }
+    }
+}
+
+function draw() {
+    renderer.render(scene, camera);
+    requestAnimationFrame(() => {
+        update();
+        draw();
+    });
+}
+
+btnRestart.addEventListener('click', init);
+
+init();
+update();
+draw();

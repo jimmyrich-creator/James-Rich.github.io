@@ -12,8 +12,8 @@ const uiLevelUpBanner = document.getElementById('level-up-banner');
 
 // --- THREE.JS SETUP ---
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0f172a); // dark slate blue
-scene.fog = new THREE.Fog(0x0f172a, 300, 1500);
+scene.background = new THREE.Color(0xf2ebe1); // bright cream
+scene.fog = new THREE.Fog(0xf2ebe1, 300, 1500);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
 // We will look down at an angle
@@ -121,14 +121,19 @@ function generateFloorTexture(isGrayscale = false) {
     tCanvas.height = 1024;
     const tCtx = tCanvas.getContext('2d');
     
-    tCtx.fillStyle = '#ffffff';
+    tCtx.fillStyle = '#f2ebe1'; // Cream base
     tCtx.fillRect(0, 0, 1024, 1024);
     
     const cols = 20; 
     const colW = 1024 / cols;
+    const paletteColors = ['#f2ebe1', '#52d1dc', '#f5af3d', '#ff3356'];
+    
     for(let i=0; i<cols; i++) {
-        const hue = i * (360/cols);
-        tCtx.fillStyle = isGrayscale ? `hsl(0, 0%, ${50 + Math.sin(i)*12}%)` : `hsl(${hue}, 80%, 65%)`;
+        if (isGrayscale) {
+            tCtx.fillStyle = `hsl(0, 0%, ${90 - (i % 2) * 5}%)`;
+        } else {
+            tCtx.fillStyle = paletteColors[i % paletteColors.length];
+        }
         tCtx.fillRect(i * colW, 0, colW, 1024);
     }
     
@@ -136,12 +141,31 @@ function generateFloorTexture(isGrayscale = false) {
     const rows = 15; 
     const rowH = 1024 / rows;
     for(let i=0; i<rows; i++) {
-        const hue = 180 + i * (180/rows);
-        tCtx.fillStyle = isGrayscale ? `hsl(0, 0%, ${60 + Math.cos(i)*12}%)` : `hsl(${hue}, 80%, 65%)`; 
+        if (isGrayscale) {
+            tCtx.fillStyle = `hsl(0, 0%, ${90 - (i % 2) * 5}%)`;
+        } else {
+            tCtx.fillStyle = paletteColors[(i + 2) % paletteColors.length];
+        }
         tCtx.fillRect(0, i * rowH, 1024, rowH);
     }
     
     tCtx.globalCompositeOperation = 'source-over';
+    
+    // Draw subtle grid lines on top
+    tCtx.strokeStyle = isGrayscale ? 'rgba(0, 0, 0, 0.05)' : 'rgba(42, 50, 51, 0.15)';
+    tCtx.lineWidth = 4;
+    for(let i=0; i<=cols; i++) {
+        tCtx.beginPath();
+        tCtx.moveTo(i * colW, 0);
+        tCtx.lineTo(i * colW, 1024);
+        tCtx.stroke();
+    }
+    for(let i=0; i<=rows; i++) {
+        tCtx.beginPath();
+        tCtx.moveTo(0, i * rowH);
+        tCtx.lineTo(1024, i * rowH);
+        tCtx.stroke();
+    }
     
     const tex = new THREE.CanvasTexture(tCanvas);
     tex.wrapS = THREE.RepeatWrapping;
@@ -179,6 +203,18 @@ function generateUnionJackTexture() {
     return new THREE.CanvasTexture(canvas);
 }
 
+let boundaryLightningMesh; // InstancedMesh for thick boundary lightning
+
+// Reusable math objects for performance (avoids GC allocations)
+const _pos = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _perp = new THREE.Vector3();
+const _mid = new THREE.Vector3();
+const _scale = new THREE.Vector3();
+const _quat = new THREE.Quaternion();
+const _matrix = new THREE.Matrix4();
+const _zAxis = new THREE.Vector3(0, 0, 1);
+
 const groundGeo = new THREE.PlaneGeometry(WORLD_W, WORLD_H);
 const colorFloorTexture = generateFloorTexture(false);
 const groundMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: colorFloorTexture, roughness: 0.9, metalness: 0.1 });
@@ -194,26 +230,26 @@ gridHelper.position.set(WORLD_W/2, 1, WORLD_H/2);
 scene.add(gridHelper);
 
 // Common Materials
-const matMech = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.4 });
-const matMechAccent = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xf43f5e, emissiveIntensity: 0.5 });
-const matFoot = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
-const matDog = new THREE.MeshStandardMaterial({ color: 0xfbbf24 });
-const matEnemy = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.5 });
-const matEnemyEye = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.8 });
-const matAntBody = new THREE.MeshStandardMaterial({ color: 0x0f0f12, metalness: 0.8, roughness: 0.25 });
-const tronCyan = new THREE.Color(0x00f0ff);
-const tronPink = new THREE.Color(0xff007f);
+const matMech = new THREE.MeshStandardMaterial({ color: 0x2a3233, metalness: 0.6, roughness: 0.4 });
+const matMechAccent = new THREE.MeshStandardMaterial({ color: 0xff3356, emissive: 0xff3356, emissiveIntensity: 0.5 });
+const matFoot = new THREE.MeshStandardMaterial({ color: 0x52d1dc });
+const matDog = new THREE.MeshStandardMaterial({ color: 0xf5af3d });
+const matEnemy = new THREE.MeshStandardMaterial({ color: 0x2a3233, metalness: 0.5, roughness: 0.5 });
+const matEnemyEye = new THREE.MeshStandardMaterial({ color: 0x52d1dc, emissive: 0x52d1dc, emissiveIntensity: 0.8 });
+const matAntBody = new THREE.MeshStandardMaterial({ color: 0x2a3233, metalness: 0.8, roughness: 0.25 });
+const tronCyan = new THREE.Color(0x52d1dc);
+const tronPink = new THREE.Color(0xff3356);
 function generateBuildingTexture() {
     const tCanvas = document.createElement('canvas');
     tCanvas.width = 256;
     tCanvas.height = 256;
     const tCtx = tCanvas.getContext('2d');
     
-    tCtx.fillStyle = '#ffffff';
+    tCtx.fillStyle = '#f2ebe1'; // Cream base
     tCtx.fillRect(0, 0, 256, 256);
     
-    // Optical illusion: dense concentric squares
-    tCtx.strokeStyle = '#000000';
+    // Optical illusion: dense concentric squares in dark charcoal
+    tCtx.strokeStyle = '#2a3233';
     tCtx.lineWidth = 4;
     for(let i=4; i<128; i+=8) {
         tCtx.strokeRect(i, i, 256-i*2, 256-i*2);
@@ -227,7 +263,7 @@ function generateBuildingTexture() {
 }
 
 const buildingTexture = generateBuildingTexture();
-const buildingPalette = [0x111111, 0x333333, 0x555555, 0x777777, 0x999999]; // Greyscales for optical illusion effect
+const buildingPalette = [0x52d1dc, 0xf5af3d, 0xff3356, 0xf2ebe1, 0x2a3233]; // Harmonious bright palette
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 const coneGeo = new THREE.ConeGeometry(1, 1, 3);
 const matCollectable = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.4, metalness: 0.8, roughness: 0.2 });
@@ -270,9 +306,9 @@ function toggleEffect(id) {
             const canvasTex = buildingTexture.image;
             if (canvasTex) {
                 const ctx = canvasTex.getContext('2d');
-                ctx.fillStyle = '#ffffff';
+                ctx.fillStyle = '#f2ebe1';
                 ctx.fillRect(0, 0, 256, 256);
-                ctx.strokeStyle = '#000000';
+                ctx.strokeStyle = '#2a3233';
                 ctx.lineWidth = 4;
                 for(let i=4; i<128; i+=8) {
                     ctx.strokeRect(i, i, 256-i*2, 256-i*2);
@@ -290,7 +326,7 @@ function toggleEffect(id) {
         buildings.forEach(b => {
             b.mesh.visible = !effectTronMode;
             if (!effectTronMode) {
-                b.line.material.color.setHex(0xffffff); // Reset color to white
+                b.line.material.color.setHex(0x2a3233); // Reset color to dark charcoal
             }
         });
     } else if (id === 8) {
@@ -310,11 +346,11 @@ function toggleEffect(id) {
 function updateEffectsHUD() {
     if (!uiEffectsHUD) return;
     let html = '';
-    if (effectFloorFlash) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (1) STROBE FLOOR ON</div>';
-    if (effectRubberBuildings) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (2) RUBBER CITY ON</div>';
-    if (effectFilmNoir) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (3) FILM NOIR ON</div>';
-    if (effectCamZoom) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (4) BREATHING CAMERA ON</div>';
-    if (effectFractals) html += '<div style="text-shadow: 0 0 8px #a855f7;">✦ (5) FRACTAL WALLS ON</div>';
+    if (effectFloorFlash) html += '<div style="text-shadow: 0 0 8px #ff3356;">✦ (1) STROBE FLOOR ON</div>';
+    if (effectRubberBuildings) html += '<div style="text-shadow: 0 0 8px #ff3356;">✦ (2) RUBBER CITY ON</div>';
+    if (effectFilmNoir) html += '<div style="text-shadow: 0 0 8px #ff3356;">✦ (3) FILM NOIR ON</div>';
+    if (effectCamZoom) html += '<div style="text-shadow: 0 0 8px #ff3356;">✦ (4) BREATHING CAMERA ON</div>';
+    if (effectFractals) html += '<div style="text-shadow: 0 0 8px #ff3356;">✦ (5) FRACTAL WALLS ON</div>';
     if (effectFloorScroll) html += '<div style="text-shadow: 0 0 8px #06b6d4;">✦ (6) HYPERSPACE FLOOR ON</div>';
     if (effectTronMode) html += '<div style="text-shadow: 0 0 8px #06b6d4;">✦ (7) TRON WIREFRAME ON</div>';
     if (effectScreenShake) html += '<div style="text-shadow: 0 0 8px #06b6d4;">✦ (8) EARTHQUAKE SHAKE ON</div>';
@@ -332,10 +368,10 @@ function animateFractalTexture() {
     const w = canvasTex.width;
     const h = canvasTex.height;
     
-    // Recursive rotating square fractal
-    ctx.fillStyle = '#ffffff';
+    // Recursive rotating square fractal in neon red/pink
+    ctx.fillStyle = '#f2ebe1';
     ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = '#ff3356';
     ctx.lineWidth = 5;
     
     ctx.save();
@@ -459,20 +495,20 @@ class Player {
     update() {
         if (this.health <= 0) return;
 
-        // Right stick or Arrow keys to orbit/pitch the camera
+        // Right stick or Arrow keys to orbit/pitch the camera (boosted sensitivity)
         if (!effectCamZoom) {
             // Gamepad right stick (inverted so pushing right looks right, pushing up looks up)
             if (Math.abs(gpState.axes[2]) > 0.15) {
-                cameraYaw -= gpState.axes[2] * 0.04 * timeScale;
+                cameraYaw -= gpState.axes[2] * 0.09 * timeScale;
             }
             if (Math.abs(gpState.axes[3]) > 0.15) {
-                cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch - gpState.axes[3] * 0.03 * timeScale));
+                cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch - gpState.axes[3] * 0.07 * timeScale));
             }
             // Keyboard Arrow keys (synchronized with inverted stick controls)
-            if (keys['ArrowLeft']) cameraYaw += 0.04 * timeScale;
-            if (keys['ArrowRight']) cameraYaw -= 0.04 * timeScale;
-            if (keys['ArrowUp']) cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch + 0.03 * timeScale));
-            if (keys['ArrowDown']) cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch - 0.03 * timeScale));
+            if (keys['ArrowLeft']) cameraYaw += 0.09 * timeScale;
+            if (keys['ArrowRight']) cameraYaw -= 0.09 * timeScale;
+            if (keys['ArrowUp']) cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch + 0.07 * timeScale));
+            if (keys['ArrowDown']) cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch - 0.07 * timeScale));
         }
 
         let togglePressed = keys['Space'] || justPressed(0);
@@ -907,8 +943,8 @@ class Enemy {
         
         // Define a unique glow material per enemy instance to avoid global color bleeding
         this.glowMat = new THREE.MeshStandardMaterial({ 
-            color: 0x8b00ff, // Deep gothic purple/violet
-            emissive: 0x8b00ff, 
+            color: 0x52d1dc, // Glow cyan/teal
+            emissive: 0x52d1dc, 
             emissiveIntensity: 0.8,
             metalness: 0.5,
             roughness: 0.5
@@ -920,7 +956,7 @@ class Enemy {
         // Thorax (central part)
         let thorax = new THREE.Mesh(boxGeo, matAntBody);
         thorax.scale.set(14, 14, 32);
-        thorax.position.set(0, 84, -2);
+        thorax.position.set(0, 75, -2); // Lowered from 84 to 75
         thorax.castShadow = true;
         thorax.receiveShadow = true;
         this.antBodyGroup.add(thorax);
@@ -928,7 +964,7 @@ class Enemy {
         // Head
         let head = new THREE.Mesh(boxGeo, matAntBody);
         head.scale.set(16, 16, 16);
-        head.position.set(0, 88, 24);
+        head.position.set(0, 79, 24); // Lowered from 88 to 79
         head.castShadow = true;
         head.receiveShadow = true;
         this.antBodyGroup.add(head);
@@ -936,14 +972,14 @@ class Enemy {
         // Mandibles (creepy curved teeth)
         let mandibleL = new THREE.Mesh(boxGeo, matAntBody);
         mandibleL.scale.set(2, 4, 10);
-        mandibleL.position.set(-5, 84, 32);
+        mandibleL.position.set(-5, 75, 32); // Lowered from 84 to 75
         mandibleL.rotation.set(0.1, -0.4, -0.2);
         mandibleL.castShadow = true;
         this.antBodyGroup.add(mandibleL);
 
         let mandibleR = new THREE.Mesh(boxGeo, matAntBody);
         mandibleR.scale.set(2, 4, 10);
-        mandibleR.position.set(5, 84, 32);
+        mandibleR.position.set(5, 75, 32); // Lowered from 84 to 75
         mandibleR.rotation.set(0.1, 0.4, 0.2);
         mandibleR.castShadow = true;
         this.antBodyGroup.add(mandibleR);
@@ -951,14 +987,14 @@ class Enemy {
         // Antennae
         let antennaL = new THREE.Mesh(boxGeo, matAntBody);
         antennaL.scale.set(1.5, 1.5, 14);
-        antennaL.position.set(-6, 96, 28);
+        antennaL.position.set(-6, 87, 28); // Lowered from 96 to 87
         antennaL.rotation.set(0.4, -0.3, 0);
         antennaL.castShadow = true;
         this.antBodyGroup.add(antennaL);
 
         let antennaR = new THREE.Mesh(boxGeo, matAntBody);
         antennaR.scale.set(1.5, 1.5, 14);
-        antennaR.position.set(6, 96, 28);
+        antennaR.position.set(6, 87, 28); // Lowered from 96 to 87
         antennaR.rotation.set(0.4, 0.3, 0);
         antennaR.castShadow = true;
         this.antBodyGroup.add(antennaR);
@@ -966,7 +1002,7 @@ class Enemy {
         // Abdomen (gaster - bulbous back part)
         let abdomen = new THREE.Mesh(boxGeo, matAntBody);
         abdomen.scale.set(22, 18, 30);
-        abdomen.position.set(0, 86, -30);
+        abdomen.position.set(0, 77, -30); // Lowered from 86 to 77
         abdomen.rotation.set(-0.15, 0, 0);
         abdomen.castShadow = true;
         abdomen.receiveShadow = true;
@@ -977,7 +1013,7 @@ class Enemy {
             let spike = new THREE.Mesh(boxGeo, matAntBody);
             spike.scale.set(3, 6, 3);
             let spikeZ = -22 - i * 8;
-            let spikeY = 86 + 9 - i * 2;
+            let spikeY = 77 + 9 - i * 2; // Lowered from 86 to 77 base
             spike.position.set(0, spikeY + 2, spikeZ);
             spike.rotation.set(0.3, 0, 0);
             spike.castShadow = true;
@@ -987,13 +1023,13 @@ class Enemy {
         // Eyes (glowing)
         this.eyeL = new THREE.Mesh(boxGeo, this.glowMat);
         this.eyeL.scale.set(5, 5, 2);
-        this.eyeL.position.set(-8.1, 91, 27);
+        this.eyeL.position.set(-8.1, 82, 27); // Lowered from 91 to 82
         this.eyeL.rotation.set(0, -0.5, 0);
         this.antBodyGroup.add(this.eyeL);
 
         this.eyeR = new THREE.Mesh(boxGeo, this.glowMat);
         this.eyeR.scale.set(5, 5, 2);
-        this.eyeR.position.set(8.1, 91, 27);
+        this.eyeR.position.set(8.1, 82, 27); // Lowered from 91 to 82
         this.eyeR.rotation.set(0, 0.5, 0);
         this.antBodyGroup.add(this.eyeR);
 
@@ -1007,10 +1043,10 @@ class Enemy {
             const legGroup = new THREE.Group();
             
             // Positioning along thorax:
-            // Spaced along Z at offsets: 10, 2, -6, -14
-            const pz = 10 - legIndex * 8;
-            const px = side * 7;
-            const py = 78;
+            // Spaced along Z at wider offsets to avoid collision
+            const pz = 15 - legIndex * 11;
+            const px = side * 11; // Wider attachment from body center
+            const py = 69; // Lowered hip joint center
             legGroup.position.set(px, py, pz);
             
             // Thigh (Femur)
@@ -1055,16 +1091,16 @@ class Enemy {
             
             // Base rotations to create insect fanned stance and gothic arches:
             let fanY = 0;
-            if (legIndex === 0) fanY = 0.5 * side;
-            else if (legIndex === 1) fanY = 0.15 * side;
-            else if (legIndex === 2) fanY = -0.15 * side;
-            else if (legIndex === 3) fanY = -0.65 * side;
+            if (legIndex === 0) fanY = 0.9 * side;
+            else if (legIndex === 1) fanY = 0.35 * side;
+            else if (legIndex === 2) fanY = -0.35 * side;
+            else if (legIndex === 3) fanY = -0.9 * side;
             
             legGroup.rotation.y = fanY;
             
             // Tilt joints to form a nice spider leg arch
-            thighGroup.rotation.z = -0.8 * side; // left points left, right points right
-            kneeGroup.rotation.z = 1.2 * side;  // bends back in
+            thighGroup.rotation.z = -1.0 * side; // left points left, right points right
+            kneeGroup.rotation.z = 1.4 * side;  // bends back in
             ankleGroup.rotation.z = -0.4 * side; // angles out to meet the floor
             
             // References for animation
@@ -1094,6 +1130,38 @@ class Enemy {
 
         this.walkCycle = Math.random() * Math.PI * 2;
 
+        // Create scanning cone (radio waves danger zone)
+        this.scanConeGroup = new THREE.Group();
+        this.scanArcs = [];
+        
+        const arcMat = new THREE.MeshBasicMaterial({
+            color: 0x52d1dc,
+            transparent: true,
+            opacity: 0.35,
+            wireframe: true,
+            side: THREE.DoubleSide
+        });
+        
+        const maxScanDistance = 220;
+        const numArcs = 2; // Reduced cadence by half (2 arcs instead of 3)
+        const angleWidth = 1.05; // ~60 degrees fov cone
+        const scanHeight = 60; // 1.5x taller (0.75x height of ants)
+        
+        for (let i = 0; i < numArcs; i++) {
+            const radius = (i + 1) * (maxScanDistance / numArcs);
+            // CylinderGeometry arguments: radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength
+            const geo = new THREE.CylinderGeometry(radius, radius, scanHeight, 16, 8, true, -angleWidth/2, angleWidth);
+            const mesh = new THREE.Mesh(geo, arcMat.clone());
+            // Center vertically so bottom rests at y = 0
+            mesh.position.set(0, scanHeight/2, 24);
+            this.scanConeGroup.add(mesh);
+            this.scanArcs.push({
+                line: mesh, // keep named 'line' to match update code references
+                baseRadius: radius
+            });
+        }
+        this.group.add(this.scanConeGroup);
+
         this.group.position.set(this.x, 0, this.y);
         scene.add(this.group);
     }
@@ -1104,66 +1172,131 @@ class Enemy {
         let dy = targetY - this.y;
         let distToTarget = Math.sqrt(dx*dx + dy*dy);
 
-        if (player.controlDog && distToTarget < 800) {
-            this.state = 'chase';
-            this.glowMat.color.setHex(0xf43f5e);
-            this.glowMat.emissive.setHex(0xf43f5e);
-        } else {
-            this.state = 'wander';
-            this.glowMat.color.setHex(0x8b00ff);
-            this.glowMat.emissive.setHex(0x8b00ff);
+        let spotted = false;
+        if (player.health > 0) {
+            if (player.controlDog && distToTarget < 800) {
+                spotted = true; // Dog is loud, spotted from far away!
+            } else if (distToTarget < 220) {
+                // On foot (stealth): spotted only if in scanner cone!
+                let forwardX = Math.sin(this.group.rotation.y);
+                let forwardZ = Math.cos(this.group.rotation.y);
+                let dot = (dx / distToTarget) * forwardX + (dy / distToTarget) * forwardZ;
+                if (dot > 0.85) { // cos(31 degrees) ≈ 0.85
+                    spotted = true;
+                }
+            }
         }
 
-        // Animate 8 legs walking with a slow, creepy alternating tetrapod gait (4 legs at a time)
-        this.walkCycle += this.speed * 0.045 * timeScale; // 3x slower walking speed
-        
-        const phaseA = this.walkCycle;
-        const phaseB = this.walkCycle + Math.PI;
+        if (spotted) {
+            this.state = 'chase';
+            this.glowMat.color.setHex(0xff3356);
+            this.glowMat.emissive.setHex(0xff3356);
+        } else {
+            this.state = 'wander';
+            this.glowMat.color.setHex(0x52d1dc);
+            this.glowMat.emissive.setHex(0x52d1dc);
+        }
 
+        // Animate scan arcs propagating forward (5 Hz / once every 200ms)
+        const cycle = (Date.now() / 200) % 1.0; // Pulse once every 200ms
+        const isChase = (this.state === 'chase');
+        const scanColor = isChase ? 0xff3356 : 0x52d1dc;
+        
+        if (this.scanArcs) {
+            const totalArcs = this.scanArcs.length;
+            this.scanArcs.forEach((arc, idx) => {
+                const progress = (idx / totalArcs + cycle) % 1.0;
+                // Smooth sine-wave easing for expansion
+                const smoothProgress = Math.sin(progress * Math.PI / 2);
+                const scale = 0.2 + smoothProgress * 1.2;
+                arc.line.scale.set(scale, 1, scale);
+                
+                // Opacity fades out smoothly as it expands
+                const baseOpacity = isChase ? 0.75 : 0.35;
+                arc.line.material.opacity = (1.0 - smoothProgress) * baseOpacity;
+                arc.line.material.color.setHex(scanColor);
+                
+                // Animate the actual 3D wave ripples along the height of the curtain (analogue & curved)
+                const position = arc.line.geometry.attributes.position;
+                const array = position.array;
+                const segments = 16;
+                const heightSegments = 8;
+                const h = 60; // scanHeight
+                const thetaStart = -1.05 / 2; // -angleWidth/2
+                const thetaLength = 1.05; // angleWidth
+                
+                let vIdx = 0;
+                for (let j = 0; j <= heightSegments; j++) {
+                    const yVal = h/2 - (j / heightSegments) * h;
+                    // Modulate radius using a smooth sine wave along height
+                    const waveFactor = 1.0 + 0.12 * Math.sin(yVal * 0.12 - Date.now() * 0.008);
+                    const currentRadius = arc.baseRadius * waveFactor;
+                    
+                    for (let i = 0; i <= segments; i++) {
+                        const theta = thetaStart + (i / segments) * thetaLength;
+                        
+                        array[vIdx * 3] = Math.sin(theta) * currentRadius;
+                        array[vIdx * 3 + 1] = yVal;
+                        array[vIdx * 3 + 2] = Math.cos(theta) * currentRadius;
+                        vIdx++;
+                    }
+                }
+                position.needsUpdate = true;
+            });
+        }
+
+        // Animate 8 legs walking with a rapid, scurrying staggered gait (2 legs moving at a time)
+        this.walkCycle += this.speed * 0.16 * timeScale; // 3.5x faster walking speed for scurrying
+        
         for (let i = 0; i < 4; i++) {
             const legL = this.legsL[i];
             const legR = this.legsR[i];
             
-            // Alternating legs phase: Left legs alternate L0(A), L1(B), L2(A), L3(B)
-            const phaseL = (i % 2 === 0) ? phaseA : phaseB;
-            // Right legs alternate opposite: R0(B), R1(A), R2(B), R3(A)
-            const phaseR = (i % 2 === 0) ? phaseB : phaseA;
+            // 4 leg pairs moving staggered: L0+R2, L1+R3, L2+R0, L3+R1
+            const phaseL = this.walkCycle + i * (Math.PI / 2);
+            const phaseR = this.walkCycle + ((i + 2) % 4) * (Math.PI / 2);
             
-            const swingL = Math.sin(phaseL);
-            const swingR = Math.sin(phaseR);
+            // Shape the swing to snap forward quickly
+            const swingL = Math.sin(phaseL + 0.25 * Math.sin(phaseL * 2));
+            const swingR = Math.sin(phaseR + 0.25 * Math.sin(phaseR * 2));
             
             // Thigh swings forward and backward
-            legL.thigh.rotation.x = swingL * 0.35;
-            legR.thigh.rotation.x = swingR * 0.35;
+            legL.thigh.rotation.x = swingL * 0.45;
+            legR.thigh.rotation.x = swingR * 0.45;
             
-            // Lift swinging-forward legs slightly off ground, bend knees/ankles
+            // Lift swinging-forward legs off the ground (swing > 0)
             // Left leg
             if (swingL > 0) {
-                legL.knee.rotation.x = legL.baseKneeRotX - swingL * 0.4;
-                legL.position.y = 78 + swingL * 6;
-                legL.ankle.rotation.x = legL.baseAnkleRotX + swingL * 0.2;
+                const liftL = Math.pow(swingL, 1.5); // Snappier lift curve
+                legL.knee.rotation.x = legL.baseKneeRotX - liftL * 0.55;
+                legL.position.y = 69 + liftL * 9;
+                legL.ankle.rotation.x = legL.baseAnkleRotX + liftL * 0.3;
             } else {
                 legL.knee.rotation.x = legL.baseKneeRotX;
-                legL.position.y = 78;
+                legL.position.y = 69;
                 legL.ankle.rotation.x = legL.baseAnkleRotX;
             }
             
             // Right leg
             if (swingR > 0) {
-                legR.knee.rotation.x = legR.baseKneeRotX - swingR * 0.4;
-                legR.position.y = 78 + swingR * 6;
-                legR.ankle.rotation.x = legR.baseAnkleRotX + swingR * 0.2;
+                const liftR = Math.pow(swingR, 1.5); // Snappier lift curve
+                legR.knee.rotation.x = legR.baseKneeRotX - liftR * 0.55;
+                legR.position.y = 69 + liftR * 9;
+                legR.ankle.rotation.x = legR.baseAnkleRotX + liftR * 0.3;
             } else {
                 legR.knee.rotation.x = legR.baseKneeRotX;
-                legR.position.y = 78;
+                legR.position.y = 69;
                 legR.ankle.rotation.x = legR.baseAnkleRotX;
             }
         }
         
         // Body bobbing/jitter when moving (relative to its local coordinate system, Y base is 0)
         if (this.body) {
-            this.body.position.y = Math.sin(this.walkCycle * 4) * 1.5;
-            this.body.rotation.z = Math.sin(this.walkCycle * 2) * 0.05;
+            // Creepy rapid insect body jitter
+            this.body.position.y = Math.sin(this.walkCycle * 2) * 2.0;
+            this.body.position.z = Math.cos(this.walkCycle * 4) * 1.0;
+            this.body.rotation.z = Math.sin(this.walkCycle * 4) * 0.06;
+            this.body.rotation.y = Math.cos(this.walkCycle * 2) * 0.04;
         }
 
         if (this.state === 'chase' && player.health > 0) {
@@ -1207,6 +1340,14 @@ class Enemy {
     destroy() {
         scene.remove(this.group);
         if (this.glowMat) this.glowMat.dispose();
+        
+        // Clean up scanner assets
+        if (this.scanArcs) {
+            this.scanArcs.forEach(arc => {
+                arc.line.geometry.dispose();
+                arc.line.material.dispose();
+            });
+        }
     }
 }
 
@@ -1322,7 +1463,7 @@ class Building {
         
         // Edge highlighting (wireframe) - bright white for Joy Division aesthetic
         const edges = new THREE.EdgesGeometry(boxGeo);
-        this.line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 }));
+        this.line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x2a3233, transparent: true, opacity: 0.8 }));
         this.line.scale.set(w, height, h);
         this.line.position.copy(this.mesh.position);
         
@@ -1466,7 +1607,7 @@ let empEffectRadius = 0;
 let empActive = false;
 let gameState = 'playing';
 let empMesh;
-let boundaryWalls = [];
+let lightningBolts = [];
 
 // Progression & Difficulty Scaling
 let currentLevel = 1;
@@ -1543,12 +1684,14 @@ function init() {
     if (healthPacks) healthPacks.forEach(h => h.destroy());
     if (empMesh) scene.remove(empMesh);
     
-    // Clean up previous boundary walls
-    boundaryWalls.forEach(w => {
-        scene.remove(w.mesh);
-        scene.remove(w.line);
-    });
-    boundaryWalls = [];
+    // Clean up previous boundary lightning
+    if (boundaryLightningMesh) {
+        scene.remove(boundaryLightningMesh);
+        boundaryLightningMesh.geometry.dispose();
+        boundaryLightningMesh.material.dispose();
+        boundaryLightningMesh = null;
+    }
+    lightningBolts = [];
     
     // Reset arrays (Note: Buildings remain the same to avoid rebuilding geometry)
     enemies = [];
@@ -1570,51 +1713,68 @@ function init() {
     player = new Player();
     bigDog = new BigDog();
 
-    // Create boundary walls
-    const wallHeight = 250;
-    const wallThickness = 20;
-    const wallMat = new THREE.MeshStandardMaterial({
-        color: 0x090d16, // Very dark tech color
+    // Create boundary lightning bolts (3 stacked bars in Cyan, Yellow, and Red using InstancedMesh)
+    const numSegmentsPerBolt = 15;
+    const totalBolts = 12; // 4 sides * 3 heights
+    const totalInstances = totalBolts * numSegmentsPerBolt;
+
+    const boltGeo = new THREE.BoxGeometry(1, 1, 1); // Unit box, scaled dynamically
+    const boltMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
         transparent: true,
-        opacity: 0.75,
-        metalness: 0.9,
-        roughness: 0.1
+        opacity: 0.85
     });
 
-    const wallSpecs = [
-        // Left wall
-        { x: -wallThickness/2, z: WORLD_H/2, w: wallThickness, h: WORLD_H + wallThickness*2 },
-        // Right wall
-        { x: WORLD_W + wallThickness/2, z: WORLD_H/2, w: wallThickness, h: WORLD_H + wallThickness*2 },
-        // Top wall
-        { x: WORLD_W/2, z: -wallThickness/2, w: WORLD_W + wallThickness*2, h: wallThickness },
-        // Bottom wall
-        { x: WORLD_W/2, z: WORLD_H + wallThickness/2, w: WORLD_W + wallThickness*2, h: wallThickness }
+    boundaryLightningMesh = new THREE.InstancedMesh(boltGeo, boltMat, totalInstances);
+    boundaryLightningMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(boundaryLightningMesh);
+
+    const lightningSpecs = [
+        // Left boundary
+        { start: new THREE.Vector3(0, 0, 0), end: new THREE.Vector3(0, 0, WORLD_H) },
+        // Right boundary
+        { start: new THREE.Vector3(WORLD_W, 0, 0), end: new THREE.Vector3(WORLD_W, 0, WORLD_H) },
+        // Top boundary
+        { start: new THREE.Vector3(0, 0, 0), end: new THREE.Vector3(WORLD_W, 0, 0) },
+        // Bottom boundary
+        { start: new THREE.Vector3(0, 0, WORLD_H), end: new THREE.Vector3(WORLD_W, 0, WORLD_H) }
     ];
 
-    wallSpecs.forEach((spec, idx) => {
-        const mesh = new THREE.Mesh(boxGeo, wallMat);
-        mesh.scale.set(spec.w, wallHeight, spec.h);
-        mesh.position.set(spec.x, wallHeight/2, spec.z);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+    const boltHeights = [15, 45, 75];
+    const boltColors = [0x52d1dc, 0xf5af3d, 0xff3356]; // Cyan, Yellow, Red
 
-        const edges = new THREE.EdgesGeometry(boxGeo);
-        // Alternating neon pink/cyan borders to match the UI visual effects
-        const colorHex = idx % 2 === 0 ? 0xa855f7 : 0x06b6d4;
-        const lineMat = new THREE.LineBasicMaterial({
-            color: colorHex,
-            transparent: true,
-            opacity: 0.9
+    let instanceIdx = 0;
+    lightningSpecs.forEach(spec => {
+        boltHeights.forEach((height, hIdx) => {
+            const startPt = spec.start.clone().setY(height);
+            const endPt = spec.end.clone().setY(height);
+            const colorHex = boltColors[hIdx];
+            
+            const dir = new THREE.Vector3().subVectors(endPt, startPt);
+            const perp = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+            
+            const bolt = {
+                start: startPt,
+                end: endPt,
+                dir: dir.clone().normalize(),
+                perp: perp,
+                length: dir.length(),
+                color: new THREE.Color(colorHex),
+                colorHex: colorHex,
+                numSegments: numSegmentsPerBolt,
+                startIndex: instanceIdx
+            };
+            
+            lightningBolts.push(bolt);
+            
+            // Assign instance colors for this bolt
+            for (let i = 0; i < numSegmentsPerBolt; i++) {
+                boundaryLightningMesh.setColorAt(instanceIdx + i, bolt.color);
+            }
+            instanceIdx += numSegmentsPerBolt;
         });
-        const line = new THREE.LineSegments(edges, lineMat);
-        line.scale.set(spec.w, wallHeight, spec.h);
-        line.position.copy(mesh.position);
-
-        scene.add(mesh);
-        scene.add(line);
-        boundaryWalls.push({ mesh, line, baseColor: new THREE.Color(colorHex) });
     });
+    boundaryLightningMesh.instanceColor.needsUpdate = true;
     
     if (buildings.length === 0) {
         const numRows = 15;
@@ -1797,7 +1957,7 @@ function evaluateAutoEffects() {
         buildings.forEach(b => {
             b.mesh.visible = !effectTronMode;
             if (!effectTronMode && b.line) {
-                b.line.material.color.setHex(0xffffff);
+                b.line.material.color.setHex(0x2a3233);
             }
         });
     }
@@ -1837,7 +1997,7 @@ function update() {
                 let dx = e.x - player.x;
                 let dy = e.y - player.y;
                 if (Math.sqrt(dx*dx + dy*dy) < empEffectRadius) {
-                    for(let j=0; j<15; j++) particles.push(new Particle(e.x, e.y, 0xf43f5e, 84));
+                    for(let j=0; j<15; j++) particles.push(new Particle(e.x, e.y, 0xf43f5e, 75));
                     e.destroy();
                     enemies.splice(i, 1);
                 }
@@ -1951,18 +2111,72 @@ function update() {
         enemies.forEach(e => e.update());
         buildings.forEach(b => b.update());
         
-        boundaryWalls.forEach((w, index) => {
+        if (boundaryLightningMesh) {
+            let instanceIdx = 0;
             let time = Date.now() * 0.003;
-            // Pulse boundary neon lines
-            w.line.material.opacity = 0.7 + 0.3 * Math.sin(time + index);
             
-            if (effectTronMode) {
-                let factor = 0.5 + 0.5 * Math.sin(time + index);
-                w.line.material.color.copy(tronCyan).lerp(tronPink, factor);
-            } else {
-                w.line.material.color.copy(w.baseColor);
-            }
-        });
+            // Pulse boundary opacity smoothly
+            boundaryLightningMesh.material.opacity = 0.7 + 0.3 * Math.sin(time * 1.5);
+            
+            lightningBolts.forEach((bolt, boltIdx) => {
+                const points = [];
+                points.push(bolt.start);
+                
+                for (let i = 1; i < bolt.numSegments; i++) {
+                    const t = i / bolt.numSegments;
+                    const p = new THREE.Vector3().copy(bolt.start).addScaledVector(bolt.dir, t * bolt.length);
+                    
+                    // Smooth waves with minimal random noise jitter
+                    const waveX = Math.sin(time * 2.5 + i * 0.5 + boltIdx) * 8;
+                    const waveY = Math.cos(time * 3.5 + i * 0.3 + boltIdx) * 5;
+                    
+                    const noiseX = (Math.random() - 0.5) * 2;
+                    const noiseY = (Math.random() - 0.5) * 1;
+                    
+                    p.addScaledVector(bolt.perp, waveX + noiseX);
+                    p.y += waveY + noiseY;
+                    points.push(p);
+                }
+                points.push(bolt.end);
+                
+                // Determine Tron Color overlay
+                let boltColor = bolt.color;
+                if (effectTronMode) {
+                    let factor = 0.5 + 0.5 * Math.sin(time + boltIdx);
+                    boltColor = new THREE.Color(tronCyan).lerp(tronPink, factor);
+                }
+                
+                for (let i = 0; i < bolt.numSegments; i++) {
+                    const pA = points[i];
+                    const pB = points[i + 1];
+                    
+                    _mid.addVectors(pA, pB).multiplyScalar(0.5);
+                    _dir.subVectors(pB, pA);
+                    const len = _dir.length();
+                    _dir.normalize();
+                    
+                    _quat.setFromUnitVectors(_zAxis, _dir);
+                    
+                    // Scale thickness: 7.0 to 10.0 unit thick boxes (twice as thick, smoother pulse!)
+                    const thickness = 7.0 + 3.0 * Math.sin(time * 2.5 + i + boltIdx);
+                    _scale.set(thickness, thickness, len);
+                    
+                    _matrix.compose(_mid, _quat, _scale);
+                    boundaryLightningMesh.setMatrixAt(instanceIdx + i, _matrix);
+                    
+                    if (effectTronMode) {
+                        boundaryLightningMesh.setColorAt(instanceIdx + i, boltColor);
+                    } else {
+                        boundaryLightningMesh.setColorAt(instanceIdx + i, bolt.color);
+                    }
+                }
+                
+                instanceIdx += bolt.numSegments;
+            });
+            
+            boundaryLightningMesh.instanceMatrix.needsUpdate = true;
+            boundaryLightningMesh.instanceColor.needsUpdate = true;
+        }
         
         for(let i=projectiles.length-1; i>=0; i--) {
             let p = projectiles[i];
@@ -1985,7 +2199,7 @@ function update() {
                         // Spawn particles at correct bullet hit height
                         for(let k=0; k<5; k++) particles.push(new Particle(p.x, p.y, 0xf59e0b, p.mesh.position.y));
                         if (e.health <= 0) {
-                            for(let k=0; k<20; k++) particles.push(new Particle(e.x, e.y, 0xef4444, 84));
+                            for(let k=0; k<20; k++) particles.push(new Particle(e.x, e.y, 0xef4444, 75));
                             e.destroy();
                             enemies.splice(j, 1);
                         }

@@ -1,9 +1,9 @@
 :root {
-    --bg-color: #0f172a;
-    --accent: #38bdf8;
-    --accent-mech: #f43f5e;
+    --bg-color: #f2ebe1;
+    --accent: #52d1dc;
+    --accent-mech: #ff3356;
     --text-main: #f8fafc;
-    --glass-bg: rgba(15, 23, 42, 0.65);
+    --glass-bg: rgba(42, 50, 51, 0.75);
     --glass-border: rgba(255, 255, 255, 0.15);
 }
 
@@ -223,8 +223,8 @@ button:active {
     transform: translate(-50%, -50%);
     font-size: 5rem;
     font-weight: 900;
-    color: #a855f7;
-    text-shadow: 0 0 25px rgba(168, 85, 247, 0.9), 0 0 50px rgba(168, 85, 247, 0.6);
+    color: #ff3356;
+    text-shadow: 0 0 25px rgba(255, 51, 86, 0.9), 0 0 50px rgba(255, 51, 86, 0.6);
     pointer-events: none;
     z-index: 1000;
     letter-spacing: 0.1em;

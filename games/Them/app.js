@@ -1197,8 +1197,8 @@ class Enemy {
             this.glowMat.emissive.setHex(0x52d1dc);
         }
 
-        // Animate scan arcs propagating forward (5 Hz / once every 200ms)
-        const cycle = (Date.now() / 200) % 1.0; // Pulse once every 200ms
+        // Animate scan arcs propagating forward (once every 1500ms)
+        const cycle = (Date.now() / 1500) % 1.0; // Pulse once every 1.5 seconds (0.66 Hz)
         const isChase = (this.state === 'chase');
         const scanColor = isChase ? 0xff3356 : 0x52d1dc;
         
@@ -1228,8 +1228,8 @@ class Enemy {
                 let vIdx = 0;
                 for (let j = 0; j <= heightSegments; j++) {
                     const yVal = h/2 - (j / heightSegments) * h;
-                    // Modulate radius using a smooth sine wave along height
-                    const waveFactor = 1.0 + 0.12 * Math.sin(yVal * 0.12 - Date.now() * 0.008);
+                    // Modulate radius using a smooth sine wave along height (4x slower ripple!)
+                    const waveFactor = 1.0 + 0.12 * Math.sin(yVal * 0.12 - Date.now() * 0.002);
                     const currentRadius = arc.baseRadius * waveFactor;
                     
                     for (let i = 0; i <= segments; i++) {

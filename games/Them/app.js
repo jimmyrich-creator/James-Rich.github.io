@@ -876,7 +876,8 @@ class BigDog {
                 }
             } else {
                 let hasInput = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'] || 
-                               Math.abs(gpState.axes[0]) > 0.2 || Math.abs(gpState.axes[1]) > 0.2;
+                               Math.abs(gpState.axes[0]) > 0.2 || Math.abs(gpState.axes[1]) > 0.2 ||
+                               (mobileInput.leftStick.active && (Math.abs(mobileInput.leftStick.dx) > 0.1 || Math.abs(mobileInput.leftStick.dy) > 0.1));
                 if (hasInput) {
                     isMoving = true;
                 }
@@ -1706,6 +1707,10 @@ function levelUp() {
 }
 
 function init() {
+    // Reset timestep clock to prevent lag spikes from triggering multiple catch-up updates
+    lastTime = performance.now();
+    accumulator = 0;
+
     // Clean up previous scene objects
     if (player) player.destroy();
     if (bigDog) bigDog.destroy();
@@ -2409,11 +2414,28 @@ function update() {
     }
 }
 
-function draw() {
+let lastTime = performance.now();
+let accumulator = 0;
+const dt = 1000 / 60; // 16.67 ms (60 FPS target update rate)
+
+function draw(timestamp) {
     renderer.render(scene, camera);
-    requestAnimationFrame(() => {
-        update();
-        draw();
+    requestAnimationFrame((nextTimestamp) => {
+        const currentTS = nextTimestamp || performance.now();
+        let elapsed = currentTS - lastTime;
+        
+        // Prevent spiral of death on tab switch or lag spikes
+        if (elapsed > 250) elapsed = 250;
+        
+        lastTime = currentTS;
+        accumulator += elapsed;
+        
+        while (accumulator >= dt) {
+            update();
+            accumulator -= dt;
+        }
+        
+        draw(currentTS);
     });
 }
 

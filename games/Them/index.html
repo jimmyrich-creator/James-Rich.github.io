@@ -47,6 +47,28 @@
     </div>
     <div id="vignette-overlay"></div>
     <canvas id="gameCanvas"></canvas>
+
+    <!-- Mobile Controls Overlay -->
+    <div id="mobile-controls-container" class="hidden">
+        <div id="left-stick-container" class="joystick-container">
+            <div id="left-stick-base" class="joystick-base">
+                <div id="left-stick-handle" class="joystick-handle"></div>
+            </div>
+        </div>
+        
+        <div id="mobile-buttons-container">
+            <button id="mobile-btn-switch" class="mobile-btn">SW</button>
+            <button id="mobile-btn-emp" class="mobile-btn">EMP</button>
+            <button id="mobile-btn-effect" class="mobile-btn">FX</button>
+        </div>
+        
+        <div id="right-stick-container" class="joystick-container">
+            <div id="right-stick-base" class="joystick-base">
+                <div id="right-stick-handle" class="joystick-handle"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="app.js"></script>
 </body>

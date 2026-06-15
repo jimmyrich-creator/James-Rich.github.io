@@ -10,6 +10,15 @@ const uiLevel = document.getElementById('level-display');
 const uiProgress = document.getElementById('progress-display');
 const uiLevelUpBanner = document.getElementById('level-up-banner');
 
+// Detect mobile device
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth < 768);
+
+// Mobile touch input state
+const mobileInput = {
+    leftStick: { active: false, touchId: null, centerX: 0, centerY: 0, dx: 0, dy: 0 },
+    rightStick: { active: false, touchId: null, centerX: 0, centerY: 0, dx: 0, dy: 0 }
+};
+
 // --- THREE.JS SETUP ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2ebe1); // bright cream
@@ -19,10 +28,16 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerH
 // We will look down at an angle
 camera.position.set(0, 400, 300);
 
-const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !isMobile });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+
+if (!isMobile) {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+} else {
+    renderer.shadowMap.enabled = false;
+}
 
 // Lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
@@ -30,15 +45,18 @@ scene.add(ambientLight);
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
 dirLight.position.set(100, 500, 200);
-dirLight.castShadow = true;
-dirLight.shadow.camera.left = -1000;
-dirLight.shadow.camera.right = 1000;
-dirLight.shadow.camera.top = 1000;
-dirLight.shadow.camera.bottom = -1000;
-dirLight.shadow.camera.near = 0.5;
-dirLight.shadow.camera.far = 2000;
-dirLight.shadow.mapSize.width = 2048;
-dirLight.shadow.mapSize.height = 2048;
+
+if (!isMobile) {
+    dirLight.castShadow = true;
+    dirLight.shadow.camera.left = -1000;
+    dirLight.shadow.camera.right = 1000;
+    dirLight.shadow.camera.top = 1000;
+    dirLight.shadow.camera.bottom = -1000;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 2000;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+}
 scene.add(dirLight);
 
 function resize() {
@@ -504,6 +522,11 @@ class Player {
             if (Math.abs(gpState.axes[3]) > 0.15) {
                 cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch - gpState.axes[3] * 0.07 * timeScale));
             }
+            // Mobile right stick camera orbit
+            if (mobileInput.rightStick.active) {
+                cameraYaw -= mobileInput.rightStick.dx * 0.08 * timeScale;
+                cameraPitch = Math.max(0.05, Math.min(1.3, cameraPitch + mobileInput.rightStick.dy * 0.06 * timeScale));
+            }
             // Keyboard Arrow keys (synchronized with inverted stick controls)
             if (keys['ArrowLeft']) cameraYaw += 0.09 * timeScale;
             if (keys['ArrowRight']) cameraYaw -= 0.09 * timeScale;
@@ -549,6 +572,11 @@ class Player {
         if (keys['KeyS']) moveY -= 1; // backward
         if (keys['KeyA']) moveX -= 1; // left
         if (keys['KeyD']) moveX += 1; // right
+
+        if (mobileInput.leftStick.active) {
+            moveX = mobileInput.leftStick.dx;
+            moveY = -mobileInput.leftStick.dy; // Invert touch Y (moving up goes forward)
+        }
 
         if (Math.abs(gpState.axes[0]) > 0.2) moveX = gpState.axes[0];
         if (Math.abs(gpState.axes[1]) > 0.2) moveY = -gpState.axes[1]; // Gamepad Y is inverted (up is negative)
@@ -599,6 +627,8 @@ class Player {
 
             if (Math.abs(gpState.axes[2]) > 0.2 || Math.abs(gpState.axes[3]) > 0.2) {
                 aimX = camForwardX; aimY = camForwardZ; aiming = true;
+            } else if (mobileInput.rightStick.active && (Math.abs(mobileInput.rightStick.dx) > 0.15 || Math.abs(mobileInput.rightStick.dy) > 0.15)) {
+                aimX = camForwardX; aimY = camForwardZ; aiming = true;
             } else if (mouse.down) {
                 aimX = (mouse.x - window.innerWidth/2); aimY = (mouse.y - window.innerHeight/2); aiming = true;
             }
@@ -635,6 +665,8 @@ class Player {
             let shooting = false;
 
             if (Math.abs(gpState.axes[2]) > 0.2 || Math.abs(gpState.axes[3]) > 0.2) {
+                aimX = camForwardX; aimY = camForwardZ; shooting = true;
+            } else if (mobileInput.rightStick.active && (Math.abs(mobileInput.rightStick.dx) > 0.15 || Math.abs(mobileInput.rightStick.dy) > 0.15)) {
                 aimX = camForwardX; aimY = camForwardZ; shooting = true;
             } else if (mouse.down) {
                 aimX = (mouse.x - window.innerWidth/2); aimY = (mouse.y - window.innerHeight/2); shooting = true;
@@ -2266,7 +2298,11 @@ function update() {
         if (!effectCamZoom) {
             // Over-the-shoulder orbiting camera (Started main camera)
             // Make base camera 2x further (260 vs 130) and scale further as the dog grows
-            let targetDist = 260 * (bigDog ? bigDog.dogScale : 1.0);
+            let baseDist = 260;
+            if (isMobile && window.innerHeight > window.innerWidth) {
+                baseDist = 360; // Zoom out for mobile portrait mode
+            }
+            let targetDist = baseDist * (bigDog ? bigDog.dogScale : 1.0);
             if (camDistance < targetDist) {
                 camDistance = Math.min(targetDist, camDistance + 5.0);
             } else {
@@ -2304,7 +2340,11 @@ function update() {
         } else {
             // Isometric / Overhead view (Zoom effect)
             // Make base camera 2x further (800 vs 400) and scale further as the dog grows
-            let targetDist = 800 * (bigDog ? bigDog.dogScale : 1.0);
+            let baseDist = 800;
+            if (isMobile && window.innerHeight > window.innerWidth) {
+                baseDist = 1100; // Zoom out for mobile portrait mode
+            }
+            let targetDist = baseDist * (bigDog ? bigDog.dogScale : 1.0);
             if (camDistance < targetDist) {
                 camDistance = Math.min(targetDist, camDistance + 6.0);
             } else {
@@ -2377,8 +2417,136 @@ function draw() {
     });
 }
 
+function setupMobileControls() {
+    const mobileContainer = document.getElementById('mobile-controls-container');
+    if (!isMobile) {
+        if (mobileContainer) mobileContainer.style.display = 'none';
+        return;
+    }
+    if (mobileContainer) mobileContainer.classList.remove('hidden');
+
+    const leftBase = document.getElementById('left-stick-base');
+    const leftHandle = document.getElementById('left-stick-handle');
+    const rightBase = document.getElementById('right-stick-base');
+    const rightHandle = document.getElementById('right-stick-handle');
+
+    const maxRadius = 45; // Max displacement in pixels
+
+    function initJoystick(baseEl, handleEl, stickState) {
+        if (!baseEl || !handleEl) return;
+
+        baseEl.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            stickState.touchId = touch.identifier;
+            const rect = baseEl.getBoundingClientRect();
+            stickState.active = true;
+            stickState.centerX = rect.left + rect.width / 2;
+            stickState.centerY = rect.top + rect.height / 2;
+            updateHandle(touch);
+        }, { passive: false });
+
+        baseEl.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!stickState.active) return;
+            
+            // Find touch with stored identifier
+            let touch = null;
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === stickState.touchId) {
+                    touch = e.touches[i];
+                    break;
+                }
+            }
+            if (touch) updateHandle(touch);
+        }, { passive: false });
+
+        function updateHandle(touch) {
+            if (!touch) return;
+            const tx = touch.clientX - stickState.centerX;
+            const ty = touch.clientY - stickState.centerY;
+            const dist = Math.sqrt(tx * tx + ty * ty);
+            
+            let finalX = tx;
+            let finalY = ty;
+            
+            if (dist > maxRadius) {
+                finalX = (tx / dist) * maxRadius;
+                finalY = (ty / dist) * maxRadius;
+            }
+            
+            handleEl.style.transform = `translate(calc(-50% + ${finalX}px), calc(-50% + ${finalY}px))`;
+            
+            // Normalize values (-1 to 1)
+            stickState.dx = finalX / maxRadius;
+            stickState.dy = finalY / maxRadius;
+        }
+
+        const handleTouchEnd = (e) => {
+            let touchEnded = false;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === stickState.touchId) {
+                    touchEnded = true;
+                    break;
+                }
+            }
+            if (touchEnded) {
+                stickState.active = false;
+                stickState.dx = 0;
+                stickState.dy = 0;
+                handleEl.style.transform = 'translate(-50%, -50%)';
+            }
+        };
+
+        baseEl.addEventListener('touchend', handleTouchEnd);
+        baseEl.addEventListener('touchcancel', handleTouchEnd);
+    }
+
+    initJoystick(leftBase, leftHandle, mobileInput.leftStick);
+    initJoystick(rightBase, rightHandle, mobileInput.rightStick);
+
+    // Setup action buttons
+    const btnSwitch = document.getElementById('mobile-btn-switch');
+    const btnEmp = document.getElementById('mobile-btn-emp');
+    const btnEffect = document.getElementById('mobile-btn-effect');
+
+    if (btnSwitch) {
+        btnSwitch.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing' && player && Date.now() - player.lastToggle > 500) {
+                player.controlDog = !player.controlDog;
+                player.lastToggle = Date.now();
+                updateHUD();
+            } else if (gameState === 'gameover') {
+                init();
+            }
+        }, { passive: false });
+    }
+
+    if (btnEmp) {
+        btnEmp.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing' && player && player.empReady && player.controlDog) {
+                fireEMP();
+            }
+        }, { passive: false });
+    }
+
+    if (btnEffect) {
+        btnEffect.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing') {
+                // Cycle to a random effect (from 1 to 10)
+                const effectId = Math.floor(Math.random() * 10) + 1;
+                toggleEffect(effectId);
+            }
+        }, { passive: false });
+    }
+}
+
 btnRestart.addEventListener('click', init);
 
+setupMobileControls();
 init();
 update();
 draw();

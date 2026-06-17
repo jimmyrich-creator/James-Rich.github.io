@@ -529,8 +529,8 @@ function getFootCoords(phi, W, S, H_lift, y_rest) {
 
 class Player {
     constructor() {
-        this.x = WORLD_W / 2;
-        this.y = WORLD_H / 2;
+        this.x = 150;
+        this.y = 150;
         this.prevX = this.x;
         this.prevY = this.y;
         this.radius = 15;
@@ -1492,7 +1492,26 @@ class Enemy {
             const radius = (i + 1) * (maxScanDistance / numArcs);
             // CylinderGeometry arguments: radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength
             const geo = new THREE.CylinderGeometry(radius, radius, scanHeight, 16, 8, true, -angleWidth/2, angleWidth);
-            const mesh = new THREE.Mesh(geo, arcMat.clone());
+            
+            const meshMat = arcMat.clone();
+            meshMat.userData = { time: { value: 0 } };
+            meshMat.onBeforeCompile = (shader) => {
+                shader.uniforms.time = meshMat.userData.time;
+                shader.vertexShader = `
+                    uniform float time;
+                ` + shader.vertexShader;
+                shader.vertexShader = shader.vertexShader.replace(
+                    '#include <begin_vertex>',
+                    `
+                    #include <begin_vertex>
+                    float wave = 1.0 + 0.12 * sin(transformed.y * 0.12 - time * 0.002);
+                    transformed.x *= wave;
+                    transformed.z *= wave;
+                    `
+                );
+            };
+
+            const mesh = new THREE.Mesh(geo, meshMat);
             // Center vertically so bottom rests at y = 0
             mesh.position.set(0, scanHeight/2, 55);
             this.scanConeGroup.add(mesh);
@@ -1557,32 +1576,10 @@ class Enemy {
                 arc.line.material.opacity = (1.0 - smoothProgress) * baseOpacity;
                 arc.line.material.color.setHex(scanColor);
                 
-                // Animate the actual 3D wave ripples along the height of the curtain (analogue & curved)
-                const position = arc.line.geometry.attributes.position;
-                const array = position.array;
-                const segments = 16;
-                const heightSegments = 8;
-                const h = 60; // scanHeight
-                const thetaStart = -1.05 / 2; // -angleWidth/2
-                const thetaLength = 1.05; // angleWidth
-                
-                let vIdx = 0;
-                for (let j = 0; j <= heightSegments; j++) {
-                    const yVal = h/2 - (j / heightSegments) * h;
-                    // Modulate radius using a smooth sine wave along height (4x slower ripple!)
-                    const waveFactor = 1.0 + 0.12 * Math.sin(yVal * 0.12 - Date.now() * 0.002);
-                    const currentRadius = arc.baseRadius * waveFactor;
-                    
-                    for (let i = 0; i <= segments; i++) {
-                        const theta = thetaStart + (i / segments) * thetaLength;
-                        
-                        array[vIdx * 3] = Math.sin(theta) * currentRadius;
-                        array[vIdx * 3 + 1] = yVal;
-                        array[vIdx * 3 + 2] = Math.cos(theta) * currentRadius;
-                        vIdx++;
-                    }
+                // Update time uniform for GPU vertex wave animation
+                if (arc.line.material.userData && arc.line.material.userData.time) {
+                    arc.line.material.userData.time.value = Date.now();
                 }
-                position.needsUpdate = true;
             });
         }
         // Animate antennae wiggling (simulating active sonar scan)
@@ -1945,6 +1942,9 @@ let smoothCamDirZ = 1;
 let cameraYaw = 0;
 let cameraPitch = 0.3; // radians looking slightly down
 let dogRailX = null;
+let dogOrbitAngle = 0;
+let cameraIntroActive = true;
+let cameraIntroLerp = 0.005;
 let enemies = [];
 let projectiles = [];
 let particles = [];
@@ -2154,8 +2154,8 @@ function init() {
                 let w = spacingX * 0.45; // Much wider gaps for navigation
                 let h = spacingY * 0.45;
                 
-                // Leave a spawn clearing in the very center
-                if (Math.abs(colX - WORLD_W/2) < 250 && Math.abs(rowY - WORLD_H/2) < 250) {
+                // Leave a spawn clearing in the bottom-left corner and the center
+                if ((colX < 350 && rowY < 350) || (Math.abs(colX - WORLD_W/2) < 250 && Math.abs(rowY - WORLD_H/2) < 250)) {
                     continue; 
                 }
                 
@@ -2194,6 +2194,12 @@ function init() {
     empMesh = new THREE.Mesh(empGeo, empMat);
     empMesh.visible = false;
     scene.add(empMesh);
+
+    // Start with a high camera that floats down
+    camera.position.set(player.x, 1800, player.y + 400);
+    camera.lookAt(player.x, 20, player.y);
+    cameraIntroActive = true;
+    cameraIntroLerp = 0.005;
 
     uiGameOver.classList.add('hidden');
     updateHUD();
@@ -2256,7 +2262,7 @@ function evaluateAutoEffects() {
     // 1. Mode-based triggers
     if (player && player.controlDog) {
         effectFloorFlash = true;
-        effectFloorScroll = true;
+        effectFloorScroll = false;
         effectFilmNoir = false;
     } else {
         effectFloorFlash = false;
@@ -2619,23 +2625,19 @@ function update() {
 
         if (!effectCamZoom) {
             if (player.controlDog && bigDog && bigDog.active) {
-                // Cinematic Rail Camera (locks tracking line while panning horizontally)
-                if (dogRailX === null) {
-                    dogRailX = bigDog.x;
-                }
-                // Rail X coordinate tracks the player very slowly (lagging/smooth)
-                dogRailX += (bigDog.x - dogRailX) * 0.015 * timeScale;
+                // Cinematic on-rails orbiting camera from a high, isometric perspective
+                dogOrbitAngle += 0.0035 * timeScale; // Slow orbit increment
                 
-                // Base distance scales with dog size
-                const baseDist = 220 * bigDog.dogScale;
+                // Classic isometric look-down angle (high viewpoint)
+                const radius = 320 * bigDog.dogScale;
+                const height = 320 * bigDog.dogScale;
                 
-                // Position camera on the rail (to the side/behind, locked in X offset but tracks Z directly)
-                targetCamX = dogRailX - baseDist * 0.8;
-                targetCamZ = bigDog.y - baseDist * 0.5;
-                targetCamY = 110 * bigDog.dogScale;
+                targetCamX = bigDog.x + radius * Math.sin(dogOrbitAngle);
+                targetCamZ = bigDog.y + radius * Math.cos(dogOrbitAngle);
+                targetCamY = height;
                 
-                // Look target is centered exactly on the Robo Dog
-                lookTarget.set(bigDog.x, 35 * bigDog.dogScale, bigDog.y);
+                // Centered on the Robo Dog, slightly offset vertically to align with his height
+                lookTarget.set(bigDog.x, 30 * bigDog.dogScale, bigDog.y);
             } else {
                 // Reset dogRailX when not playing as the dog
                 dogRailX = null;
@@ -2701,9 +2703,17 @@ function update() {
             lookTarget.set(checkX, 20, checkY);
         }
 
-        camera.position.x += (targetCamX - camera.position.x) * 0.1;
-        camera.position.y += (targetCamY - camera.position.y) * 0.1;
-        camera.position.z += (targetCamZ - camera.position.z) * 0.1;
+        let lerpFactor = cameraIntroActive ? cameraIntroLerp : 0.1;
+        camera.position.x += (targetCamX - camera.position.x) * lerpFactor;
+        camera.position.y += (targetCamY - camera.position.y) * lerpFactor;
+        camera.position.z += (targetCamZ - camera.position.z) * lerpFactor;
+
+        if (cameraIntroActive) {
+            cameraIntroLerp = Math.min(0.1, cameraIntroLerp + 0.0008 * timeScale);
+            if (Math.abs(camera.position.y - targetCamY) < 10) {
+                cameraIntroActive = false;
+            }
+        }
 
         if (effectScreenShake) {
             let shakeIntensity = 12.0;

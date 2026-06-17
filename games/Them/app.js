@@ -280,7 +280,74 @@ function generateBuildingTexture() {
     return tex;
 }
 
+function generateStoneTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    // Base cyan volcanic rock color (matching the 0x52d1dc cyan color scheme)
+    ctx.fillStyle = '#40a5b0'; 
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // Draw multiple noise passes to get speckled tuff stone texture
+    // Pass 1: Dark cyan speckles
+    ctx.fillStyle = '#1e5b63';
+    for (let i = 0; i < 4000; i++) {
+        let x = Math.random() * 512;
+        let y = Math.random() * 512;
+        let size = Math.random() * 2 + 1;
+        ctx.fillRect(x, y, size, size);
+    }
+    
+    // Pass 2: Light cyan speckles
+    ctx.fillStyle = '#83e2ed';
+    for (let i = 0; i < 3000; i++) {
+        let x = Math.random() * 512;
+        let y = Math.random() * 512;
+        let size = Math.random() * 2 + 1;
+        ctx.fillRect(x, y, size, size);
+    }
+    
+    // Pass 3: Fine dark pores
+    ctx.fillStyle = '#10363b';
+    for (let i = 0; i < 1500; i++) {
+        let x = Math.random() * 512;
+        let y = Math.random() * 512;
+        let size = Math.random() * 1.5;
+        ctx.fillRect(x, y, size, size);
+    }
+
+    // Pass 4: Larger organic weathered color patches
+    for (let i = 0; i < 40; i++) {
+        let x = Math.random() * 512;
+        let y = Math.random() * 512;
+        let radius = Math.random() * 30 + 10;
+        let grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        const color = Math.random() > 0.5 ? 'rgba(40, 160, 170, 0.25)' : 'rgba(20, 80, 85, 0.25)';
+        grad.addColorStop(0, color);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+}
+
 const buildingTexture = generateBuildingTexture();
+const stoneTexture = generateStoneTexture();
+const matMoai = new THREE.MeshStandardMaterial({
+    map: stoneTexture,
+    bumpMap: stoneTexture,
+    bumpScale: 1.5,
+    roughness: 0.95,
+    metalness: 0.05
+});
 const buildingPalette = [0x52d1dc, 0xf5af3d, 0xff3356, 0xf2ebe1, 0x2a3233]; // Harmonious bright palette
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 const coneGeo = new THREE.ConeGeometry(1, 1, 3);
@@ -415,15 +482,62 @@ function checkBuildingCollision(x, y, radius) {
     return false;
 }
 
+function solveLegIK(z, y, L1, L2) {
+    const d = Math.sqrt(z * z + y * y);
+    const dClamped = Math.max(0.1, Math.min(L1 + L2 - 0.01, d));
+    
+    // Angle of target relative to downward vertical
+    const alpha = Math.atan2(z, -y);
+    
+    // Law of cosines
+    const cosBeta = (L1 * L1 + dClamped * dClamped - L2 * L2) / (2 * L1 * dClamped);
+    const beta = Math.acos(Math.max(-1, Math.min(1, cosBeta)));
+    
+    const cosGamma = (L1 * L1 + L2 * L2 - dClamped * dClamped) / (2 * L1 * L2);
+    const gamma = Math.acos(Math.max(-1, Math.min(1, cosGamma)));
+    
+    // Knee bends backward (calf rotates positive relative to thigh)
+    const thighRot = alpha - beta;
+    const kneeRot = Math.PI - gamma;
+    
+    return { thigh: thighRot, knee: kneeRot };
+}
+
+function getFootCoords(phi, W, S, H_lift, y_rest) {
+    const t = (phi / (2 * Math.PI)) % 1; // Normalized phase [0, 1)
+    let z = 0;
+    let y = y_rest;
+    
+    if (t < 0.5) {
+        // Stance phase: move backward linearly from +S to -S
+        const s = t * 4; // 0 to 2
+        z = S * (1 - s);
+        y = y_rest;
+    } else {
+        // Swing phase: swing forward from -S to +S following a cosine curve
+        const u = (t - 0.5) * 2; // 0 to 1
+        z = -S * Math.cos(Math.PI * u);
+        y = y_rest + H_lift * Math.sin(Math.PI * u);
+    }
+    
+    // Lerp towards the center/rest state based on walkWeight W
+    return {
+        z: z * W,
+        y: y * W + y_rest * (1 - W)
+    };
+}
+
 class Player {
     constructor() {
         this.x = WORLD_W / 2;
         this.y = WORLD_H / 2;
+        this.prevX = this.x;
+        this.prevY = this.y;
         this.radius = 15;
         this.controlDog = false;
         this.health = 100;
         this.maxHealth = 100;
-        this.speedFoot = 5;
+        this.speedFoot = 3.2; // Slower, smoother walk speed
         this.lastToggle = 0;
         this.lastShot = 0;
         this.empReady = true;
@@ -438,10 +552,74 @@ class Player {
         body.scale.set(12, 18, 12);
         body.position.y = 64; // Raised to account for taller legs
         body.castShadow = true;
-        let head = new THREE.Mesh(boxGeo, matFoot);
-        head.scale.set(10, 10, 10);
-        head.position.set(0, 78, 0); // Raised to match body
-        head.castShadow = true;
+        // Procedural Moai Statue Head Group (retains clean geometric style)
+        let head = new THREE.Group();
+        head.position.set(0, 78, 0);
+        
+        // Base Moai Head Block
+        let base = new THREE.Mesh(boxGeo, matMoai);
+        base.scale.set(8.5, 15, 8.5);
+        base.position.set(0, 0, 0);
+        base.castShadow = !isMobile;
+        base.receiveShadow = !isMobile;
+        head.add(base);
+
+        // Brow Ridge
+        let brow = new THREE.Mesh(boxGeo, matMoai);
+        brow.scale.set(9.5, 2.5, 2.5);
+        brow.position.set(0, 5.5, 3.5);
+        brow.castShadow = !isMobile;
+        brow.receiveShadow = !isMobile;
+        head.add(brow);
+
+        // Nose Bridge
+        let nose = new THREE.Mesh(boxGeo, matMoai);
+        nose.scale.set(2.5, 7.5, 3.5);
+        nose.position.set(0, 1.0, 4.0);
+        nose.castShadow = !isMobile;
+        nose.receiveShadow = !isMobile;
+        head.add(nose);
+
+        // Nostril base
+        let nostrils = new THREE.Mesh(boxGeo, matMoai);
+        nostrils.scale.set(4.5, 2.0, 3.5);
+        nostrils.position.set(0, -2.5, 4.0);
+        nostrils.castShadow = !isMobile;
+        nostrils.receiveShadow = !isMobile;
+        head.add(nostrils);
+
+        // Lips
+        let lips = new THREE.Mesh(boxGeo, matMoai);
+        lips.scale.set(5.5, 1.2, 1.5);
+        lips.position.set(0, -4.5, 4.0);
+        lips.castShadow = !isMobile;
+        lips.receiveShadow = !isMobile;
+        head.add(lips);
+
+        // Chin
+        let chin = new THREE.Mesh(boxGeo, matMoai);
+        chin.scale.set(7.0, 2.5, 2.5);
+        chin.position.set(0, -6.5, 2.5);
+        chin.castShadow = !isMobile;
+        chin.receiveShadow = !isMobile;
+        head.add(chin);
+
+        // Left Ear
+        let earL = new THREE.Mesh(boxGeo, matMoai);
+        earL.scale.set(1.2, 8.5, 2.5);
+        earL.position.set(-4.5, 0.5, -0.5);
+        earL.castShadow = !isMobile;
+        earL.receiveShadow = !isMobile;
+        head.add(earL);
+
+        // Right Ear
+        let earR = new THREE.Mesh(boxGeo, matMoai);
+        earR.scale.set(1.2, 8.5, 2.5);
+        earR.position.set(4.5, 0.5, -0.5);
+        earR.castShadow = !isMobile;
+        earR.receiveShadow = !isMobile;
+        head.add(earR);
+
         this.footMesh.add(body, head);
         
         // Store references for sways
@@ -453,26 +631,26 @@ class Player {
             const legGroup = new THREE.Group();
             legGroup.position.set(px, py, pz);
             
-            // Thigh (Hip to Knee joint)
+            // Thigh (Hip to Knee joint) - length 24
             const thighGroup = new THREE.Group();
             const thighMesh = new THREE.Mesh(boxGeo, matFoot);
-            thighMesh.scale.set(3, 20, 3);
-            thighMesh.position.y = -10; // Pivot at the top (hip)
+            thighMesh.scale.set(3, 24, 3);
+            thighMesh.position.y = -12; // Pivot at the top (hip)
             thighMesh.castShadow = true;
             thighGroup.add(thighMesh);
             
-            // Knee to Ankle joint
+            // Knee to Ankle joint - length 24
             const kneeGroup = new THREE.Group();
-            kneeGroup.position.set(0, -20, 0);
+            kneeGroup.position.set(0, -24, 0);
             const calfMesh = new THREE.Mesh(boxGeo, matFoot);
-            calfMesh.scale.set(2.5, 20, 2.5);
-            calfMesh.position.y = -10; // Pivot at top (knee)
+            calfMesh.scale.set(2.5, 24, 2.5);
+            calfMesh.position.y = -12; // Pivot at top (knee)
             calfMesh.castShadow = true;
             kneeGroup.add(calfMesh);
             
-            // Ankle to Toes joint
+            // Ankle to Toes joint - length 15
             const ankleGroup = new THREE.Group();
-            ankleGroup.position.set(0, -20, 0);
+            ankleGroup.position.set(0, -24, 0);
             const footPartMesh = new THREE.Mesh(boxGeo, matFoot);
             footPartMesh.scale.set(2, 15, 2);
             footPartMesh.position.y = -7.5; // Pivot at top (ankle)
@@ -506,12 +684,57 @@ class Player {
         this.legR = createPlayerLeg(4, 60, 0);
         this.footMesh.add(this.legL, this.legR);
         this.walkCycle = 0;
+        this.walkWeight = 0;
+
+        // Add physics-based arms (Shoulder, Elbow, Forearm) - x2 longer (48 units total)
+        const createPlayerArm = (px, py, pz, isLeft) => {
+            const armGroup = new THREE.Group();
+            armGroup.position.set(px, py, pz);
+            
+            // Upper Arm (Shoulder to Elbow) - x2 longer
+            const upperArmGroup = new THREE.Group();
+            const upperArmMesh = new THREE.Mesh(boxGeo, matFoot);
+            upperArmMesh.scale.set(1.5, 24, 1.5);
+            upperArmMesh.position.y = -12; // Pivot at top
+            upperArmMesh.castShadow = !isMobile;
+            upperArmGroup.add(upperArmMesh);
+            
+            // Lower Arm (Elbow to Hand) - x2 longer
+            const lowerArmGroup = new THREE.Group();
+            lowerArmGroup.position.set(0, -24, 0); // Pivot at elbow (double distance)
+            const lowerArmMesh = new THREE.Mesh(boxGeo, matFoot);
+            lowerArmMesh.scale.set(1.0, 24, 1.0);
+            lowerArmMesh.position.y = -12; // Pivot at top
+            lowerArmMesh.castShadow = !isMobile;
+            lowerArmGroup.add(lowerArmMesh);
+            
+            upperArmGroup.add(lowerArmGroup);
+            armGroup.add(upperArmGroup);
+            
+            // Save references for animation
+            armGroup.upper = upperArmGroup;
+            armGroup.lower = lowerArmGroup;
+            
+            return armGroup;
+        };
+
+        this.armL = createPlayerArm(-6.5, 70, 0, true);
+        this.armR = createPlayerArm(6.5, 70, 0, false);
+        this.footMesh.add(this.armL, this.armR);
+
+        // Arm Physics simulation state
+        this.armPhys = {
+            left: { angleS: 0, velS: 0, angleE: 0, velE: 0 },
+            right: { angleS: 0, velS: 0, angleE: 0, velE: 0 }
+        };
 
         this.group.add(this.footMesh);
     }
 
     update() {
         if (this.health <= 0) return;
+        let oldX = this.prevX;
+        let oldY = this.prevY;
 
         // Right stick or Arrow keys to orbit/pitch the camera (boosted sensitivity)
         if (!effectCamZoom) {
@@ -626,11 +849,23 @@ class Player {
             let aiming = false;
 
             if (Math.abs(gpState.axes[2]) > 0.2 || Math.abs(gpState.axes[3]) > 0.2) {
-                aimX = camForwardX; aimY = camForwardZ; aiming = true;
+                let aimStickX = gpState.axes[2];
+                let aimStickY = -gpState.axes[3];
+                aimX = camForwardX * aimStickY + camRightX * aimStickX;
+                aimY = camForwardZ * aimStickY + camRightZ * aimStickX;
+                aiming = true;
             } else if (mobileInput.rightStick.active && (Math.abs(mobileInput.rightStick.dx) > 0.15 || Math.abs(mobileInput.rightStick.dy) > 0.15)) {
-                aimX = camForwardX; aimY = camForwardZ; aiming = true;
+                let aimStickX = mobileInput.rightStick.dx;
+                let aimStickY = -mobileInput.rightStick.dy;
+                aimX = camForwardX * aimStickY + camRightX * aimStickX;
+                aimY = camForwardZ * aimStickY + camRightZ * aimStickX;
+                aiming = true;
             } else if (mouse.down) {
-                aimX = (mouse.x - window.innerWidth/2); aimY = (mouse.y - window.innerHeight/2); aiming = true;
+                let aimStickX = mouse.x - window.innerWidth/2;
+                let aimStickY = -(mouse.y - window.innerHeight/2);
+                aimX = camForwardX * aimStickY + camRightX * aimStickX;
+                aimY = camForwardZ * aimStickY + camRightZ * aimStickX;
+                aiming = true;
             }
 
             if (aiming) {
@@ -665,11 +900,23 @@ class Player {
             let shooting = false;
 
             if (Math.abs(gpState.axes[2]) > 0.2 || Math.abs(gpState.axes[3]) > 0.2) {
-                aimX = camForwardX; aimY = camForwardZ; shooting = true;
+                let aimStickX = gpState.axes[2];
+                let aimStickY = -gpState.axes[3];
+                aimX = camForwardX * aimStickY + camRightX * aimStickX;
+                aimY = camForwardZ * aimStickY + camRightZ * aimStickX;
+                shooting = true;
             } else if (mobileInput.rightStick.active && (Math.abs(mobileInput.rightStick.dx) > 0.15 || Math.abs(mobileInput.rightStick.dy) > 0.15)) {
-                aimX = camForwardX; aimY = camForwardZ; shooting = true;
+                let aimStickX = mobileInput.rightStick.dx;
+                let aimStickY = -mobileInput.rightStick.dy;
+                aimX = camForwardX * aimStickY + camRightX * aimStickX;
+                aimY = camForwardZ * aimStickY + camRightZ * aimStickX;
+                shooting = true;
             } else if (mouse.down) {
-                aimX = (mouse.x - window.innerWidth/2); aimY = (mouse.y - window.innerHeight/2); shooting = true;
+                let aimStickX = mouse.x - window.innerWidth/2;
+                let aimStickY = -(mouse.y - window.innerHeight/2);
+                aimX = camForwardX * aimStickY + camRightX * aimStickX;
+                aimY = camForwardZ * aimStickY + camRightZ * aimStickX;
+                shooting = true;
             }
             if (gpState.buttons[7]) {
                 shooting = true;
@@ -688,58 +935,103 @@ class Player {
         }
 
         // Animate stealth player legs
-        if (!this.isMech && mag > 0) {
-            this.walkCycle += 0.22 * timeScale;
+        if (!this.isMech) {
+            let actualDx = this.x - oldX;
+            let actualDy = this.y - oldY;
+            let actualDist = Math.sqrt(actualDx * actualDx + actualDy * actualDy);
             
-            // Asymmetric phases & secondary micro-movements
-            const phaseL = this.walkCycle;
-            const phaseR = this.walkCycle + Math.PI + 0.18; // Desynchronized phase
+            const isMoving = actualDist > 0.01;
             
-            const swingL = 0.55 * Math.sin(phaseL) + 0.08 * Math.sin(phaseL * 2);
-            const swingR = 0.55 * Math.sin(phaseR) + 0.08 * Math.sin(phaseR * 2);
+            if (isMoving) {
+                this.walkCycle += (Math.PI / (2 * 16)) * actualDist;
+                this.walkWeight = THREE.MathUtils.lerp(this.walkWeight, 1, 0.15 * timeScale);
+            } else {
+                this.walkWeight = THREE.MathUtils.lerp(this.walkWeight, 0, 0.15 * timeScale);
+            }
             
-            // Left leg
-            this.legL.thigh.rotation.x = swingL;
-            this.legL.knee.rotation.x = Math.max(0, swingL) * 1.6 + 0.1 * Math.sin(phaseL * 2); 
-            this.legL.ankle.rotation.x = Math.max(0, swingL) * 0.7 + 0.1 * Math.cos(phaseL);
-            this.legL.toe.rotation.x = Math.max(0, -swingL) * 0.5;
-            this.legL.position.y = 60 + Math.max(0, swingL) * 8;
+            // Calculate foot targets in local 2D space relative to hip
+            // Hip height is 60, ankle target rest Y is -45 (since ankle is 15 above Y=0)
+            const coordsL = getFootCoords(this.walkCycle, this.walkWeight, 16, 10, -45);
+            const coordsR = getFootCoords(this.walkCycle + Math.PI, this.walkWeight, 16, 10, -45);
             
-            // Right leg
-            this.legR.thigh.rotation.x = swingR;
-            this.legR.knee.rotation.x = Math.max(0, swingR) * 1.6 + 0.1 * Math.sin(phaseR * 2);
-            this.legR.ankle.rotation.x = Math.max(0, swingR) * 0.7 + 0.1 * Math.cos(phaseR);
-            this.legR.toe.rotation.x = Math.max(0, -swingR) * 0.5;
-            this.legR.position.y = 60 + Math.max(0, swingR) * 8;
+            const ikL = solveLegIK(coordsL.z, coordsL.y, 24, 24);
+            const ikR = solveLegIK(coordsR.z, coordsR.y, 24, 24);
+            
+            // Apply rotations
+            this.legL.thigh.rotation.x = ikL.thigh;
+            this.legL.knee.rotation.x = ikL.knee;
+            this.legL.ankle.rotation.x = -(ikL.thigh + ikL.knee);
+            this.legL.toe.rotation.x = 0; // Keep flat
+            
+            this.legR.thigh.rotation.x = ikR.thigh;
+            this.legR.knee.rotation.x = ikR.knee;
+            this.legR.ankle.rotation.x = -(ikR.thigh + ikR.knee);
+            this.legR.toe.rotation.x = 0; // Keep flat
+            
+            // Ensure hips are reset/fixed to Y=60
+            this.legL.position.y = 60;
+            this.legR.position.y = 60;
             
             // Hips and head dynamic sway
             if (this.playerBody && this.playerHead) {
-                this.playerBody.position.y = 64 + Math.sin(this.walkCycle * 2) * 1.2; // Bobbing
-                this.playerBody.rotation.y = Math.sin(this.walkCycle) * 0.08;        // Hip sway
-                this.playerBody.rotation.z = Math.cos(this.walkCycle) * 0.04;        // Weight shift
-                this.playerHead.position.y = 78 + Math.abs(Math.sin(this.walkCycle * 2)) * 1.5;
-            }
-        } else if (!this.isMech) {
-            // Smoothly return to rest state
-            this.legL.thigh.rotation.x += (0 - this.legL.thigh.rotation.x) * 0.15;
-            this.legL.knee.rotation.x += (0 - this.legL.knee.rotation.x) * 0.15;
-            this.legL.ankle.rotation.x += (0 - this.legL.ankle.rotation.x) * 0.15;
-            this.legL.toe.rotation.x += (0 - this.legL.toe.rotation.x) * 0.15;
-            this.legL.position.y += (60 - this.legL.position.y) * 0.15;
-
-            this.legR.thigh.rotation.x += (0 - this.legR.thigh.rotation.x) * 0.15;
-            this.legR.knee.rotation.x += (0 - this.legR.knee.rotation.x) * 0.15;
-            this.legR.ankle.rotation.x += (0 - this.legR.ankle.rotation.x) * 0.15;
-            this.legR.toe.rotation.x += (0 - this.legR.toe.rotation.x) * 0.15;
-            this.legR.position.y += (60 - this.legR.position.y) * 0.15;
-            
-            if (this.playerBody && this.playerHead) {
-                this.playerBody.position.y += (64 - this.playerBody.position.y) * 0.15;
-                this.playerBody.rotation.y += (0 - this.playerBody.rotation.y) * 0.15;
-                this.playerBody.rotation.z += (0 - this.playerBody.rotation.z) * 0.15;
-                this.playerHead.position.y += (78 - this.playerHead.position.y) * 0.15;
+                const bob = Math.sin(this.walkCycle * 2) * 1.2 * this.walkWeight;
+                const swayY = Math.sin(this.walkCycle) * 0.08 * this.walkWeight;
+                const swayZ = Math.cos(this.walkCycle) * 0.04 * this.walkWeight;
+                const headBob = Math.abs(Math.sin(this.walkCycle * 2)) * 1.5 * this.walkWeight;
+                
+                this.playerBody.position.y = THREE.MathUtils.lerp(this.playerBody.position.y, 64 + bob, 0.15 * timeScale);
+                this.playerBody.rotation.y = THREE.MathUtils.lerp(this.playerBody.rotation.y, swayY, 0.15 * timeScale);
+                this.playerBody.rotation.z = THREE.MathUtils.lerp(this.playerBody.rotation.z, swayZ, 0.15 * timeScale);
+                this.playerHead.position.y = THREE.MathUtils.lerp(this.playerHead.position.y, 78 + headBob, 0.15 * timeScale);
             }
         }
+
+        // Physics-based arm swinging & lag simulation
+        if (!this.isMech) {
+            // Left arm physics targets (oscillate at half leg speed: walkCycle * 0.5)
+            let targetSL = -0.4 * Math.sin(this.walkCycle * 0.5) * mag - mag * 0.4;
+            let targetEL = Math.max(0, -this.armPhys.left.velS * 1.5) + mag * 0.4;
+            
+            // Right arm physics targets
+            let targetSR = 0.4 * Math.sin(this.walkCycle * 0.5) * mag - mag * 0.4;
+            let targetER = Math.max(0, -this.armPhys.right.velS * 1.5) + mag * 0.4;
+            
+            if (mag === 0) {
+                targetSL = 0;
+                targetEL = 0;
+                targetSR = 0;
+                targetER = 0;
+            }
+            
+            // Left spring logic (reduced stiffness 0.08, increased damping 0.85 for relaxed feel)
+            this.armPhys.left.velS += (targetSL - this.armPhys.left.angleS) * 0.08;
+            this.armPhys.left.velS *= 0.85;
+            this.armPhys.left.angleS += this.armPhys.left.velS * timeScale;
+            
+            this.armPhys.left.velE += (targetEL - this.armPhys.left.angleE) * 0.09;
+            this.armPhys.left.velE *= 0.82;
+            this.armPhys.left.angleE += this.armPhys.left.velE * timeScale;
+            
+            // Right spring logic
+            this.armPhys.right.velS += (targetSR - this.armPhys.right.angleS) * 0.08;
+            this.armPhys.right.velS *= 0.85;
+            this.armPhys.right.angleS += this.armPhys.right.velS * timeScale;
+            
+            this.armPhys.right.velE += (targetER - this.armPhys.right.angleE) * 0.09;
+            this.armPhys.right.velE *= 0.82;
+            this.armPhys.right.angleE += this.armPhys.right.velE * timeScale;
+            
+            // Apply rotations
+            this.armL.upper.rotation.x = this.armPhys.left.angleS;
+            this.armL.lower.rotation.x = -this.armPhys.left.angleE;
+            this.armL.upper.rotation.z = -0.05 - mag * 0.1;
+            
+            this.armR.upper.rotation.x = this.armPhys.right.angleS;
+            this.armR.lower.rotation.x = -this.armPhys.right.angleE;
+            this.armR.upper.rotation.z = 0.05 + mag * 0.1;
+        }
+        this.prevX = this.x;
+        this.prevY = this.y;
     }
 
     destroy() {
@@ -782,20 +1074,20 @@ class BigDog {
             const legGroup = new THREE.Group();
             legGroup.position.set(px, py, pz);
             
-            // Upper leg segment (hip joint to knee joint)
+            // Upper leg segment (hip joint to knee joint) - length 44
             const upperLegGroup = new THREE.Group();
             const upperLegMesh = new THREE.Mesh(boxGeo, matLeg);
-            upperLegMesh.scale.set(4, 40, 4); // Height is 40 (5x original 8, combined with lower leg for 10x taller)
-            upperLegMesh.position.y = -20; // Pivot at the hip
+            upperLegMesh.scale.set(4, 44, 4);
+            upperLegMesh.position.y = -22; // Pivot at the hip
             upperLegMesh.castShadow = true;
             upperLegGroup.add(upperLegMesh);
             
-            // Lower leg segment (knee joint to foot)
+            // Lower leg segment (knee joint to foot) - length 44
             const lowerLegGroup = new THREE.Group();
-            lowerLegGroup.position.set(0, -40, 0); // Positioned at knee joint
+            lowerLegGroup.position.set(0, -44, 0); // Positioned at knee joint
             const lowerLegMesh = new THREE.Mesh(boxGeo, matLeg);
-            lowerLegMesh.scale.set(3, 40, 3); // Height is 40, slightly thinner for visual structure
-            lowerLegMesh.position.y = -20; // Pivot at the knee
+            lowerLegMesh.scale.set(3, 44, 3);
+            lowerLegMesh.position.y = -22; // Pivot at the knee
             lowerLegMesh.castShadow = true;
             lowerLegGroup.add(lowerLegMesh);
             
@@ -809,7 +1101,7 @@ class BigDog {
             return legGroup;
         };
 
-        // Attach legs to body bottom (legs are 80 units long, so hip is at y = 80)
+        // Attach legs to body bottom (legs are 88 units long when straight, hip is at y = 83)
         this.legFL = createLeg(-6, 83, 8);
         this.legFR = createLeg(6, 83, 8);
         this.legBL = createLeg(-6, 83, -8);
@@ -830,11 +1122,16 @@ class BigDog {
         this.group.add(this.tail);
 
         this.walkCycle = 0;
+        this.walkWeight = 0;
+        this.prevX = this.x;
+        this.prevY = this.y;
 
         scene.add(this.group);
     }
     update() {
         if (!this.active) return;
+        let oldX = this.prevX;
+        let oldY = this.prevY;
         this.group.scale.set(this.dogScale, this.dogScale, this.dogScale);
         
         this.parachuteMesh.visible = this.isParachuting;
@@ -872,89 +1169,74 @@ class BigDog {
                     if (!checkBuildingCollision(this.x + dxMove, this.y, 10)) this.x += dxMove;
                     if (!checkBuildingCollision(this.x, this.y + dyMove, 10)) this.y += dyMove;
                     this.group.rotation.y = Math.atan2(dx, dy);
-                    isMoving = true;
-                }
-            } else {
-                let hasInput = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'] || 
-                               Math.abs(gpState.axes[0]) > 0.2 || Math.abs(gpState.axes[1]) > 0.2 ||
-                               (mobileInput.leftStick.active && (Math.abs(mobileInput.leftStick.dx) > 0.1 || Math.abs(mobileInput.leftStick.dy) > 0.1));
-                if (hasInput) {
-                    isMoving = true;
                 }
             }
+
+            let actualDx = this.x - oldX;
+            let actualDy = this.y - oldY;
+            let actualDist = Math.sqrt(actualDx * actualDx + actualDy * actualDy);
+            let isMoving = actualDist > 0.01;
 
             if (isMoving) {
-                // Trot cycle based on movement speed
-                this.walkCycle += 0.25 * timeScale;
-                
-                // Desynchronized phase offsets for all four legs (less uniform)
-                const swingFL = 0.6 * Math.sin(this.walkCycle);
-                const swingFR = 0.6 * Math.sin(this.walkCycle + Math.PI + 0.15);
-                const swingBL = 0.6 * Math.sin(this.walkCycle + Math.PI - 0.15);
-                const swingBR = 0.6 * Math.sin(this.walkCycle + 0.2);
-                
-                // Swing diagonal pairs at hips (with offsets)
-                this.legFL.upper.rotation.x = swingFL;
-                this.legBR.upper.rotation.x = swingBR;
-                this.legFR.upper.rotation.x = swingFR;
-                this.legBL.upper.rotation.x = swingBL;
-                
-                // Bend knees based on their individual offsets
-                this.legFL.lower.rotation.x = -Math.abs(swingFL) * 1.3;
-                this.legBR.lower.rotation.x = -Math.abs(swingBR) * 1.3;
-                this.legFR.lower.rotation.x = -Math.abs(swingFR) * 1.3;
-                this.legBL.lower.rotation.x = -Math.abs(swingBL) * 1.3;
-                
-                // Lift legs slightly as they swing forward (base height is 83)
-                this.legFL.position.y = 83 + Math.max(0, swingFL) * 12;
-                this.legBR.position.y = 83 + Math.max(0, swingBR) * 12;
-                this.legFR.position.y = 83 + Math.max(0, swingFR) * 12;
-                this.legBL.position.y = 83 + Math.max(0, swingBL) * 12;
-
-                // Body weight shifts (bobbing, rolling, yawning)
-                if (this.body) {
-                    this.body.position.y = 84 + Math.sin(this.walkCycle * 2) * 1.5;
-                    this.body.rotation.z = Math.sin(this.walkCycle) * 0.04;
-                    this.body.rotation.y = Math.cos(this.walkCycle) * 0.03;
-                }
-
-                // Fast tail wag when running
-                this.tail.rotation.y = Math.sin(this.walkCycle * 2.5) * 0.4;
-                
-                // Bob head
-                this.head.position.y = 90 + Math.abs(Math.sin(this.walkCycle)) * 4.5;
-                this.head.position.x = Math.sin(this.walkCycle) * 0.8;
+                this.walkCycle += (Math.PI / (2 * 22)) * actualDist;
+                this.walkWeight = THREE.MathUtils.lerp(this.walkWeight, 1, 0.15 * timeScale);
             } else {
-                // Return legs/tail/head to rest
-                this.legFL.upper.rotation.x += (0 - this.legFL.upper.rotation.x) * 0.15;
-                this.legFR.upper.rotation.x += (0 - this.legFR.upper.rotation.x) * 0.15;
-                this.legBL.upper.rotation.x += (0 - this.legBL.upper.rotation.x) * 0.15;
-                this.legBR.upper.rotation.x += (0 - this.legBR.upper.rotation.x) * 0.15;
-
-                this.legFL.lower.rotation.x += (0 - this.legFL.lower.rotation.x) * 0.15;
-                this.legFR.lower.rotation.x += (0 - this.legFR.lower.rotation.x) * 0.15;
-                this.legBL.lower.rotation.x += (0 - this.legBL.lower.rotation.x) * 0.15;
-                this.legBR.lower.rotation.x += (0 - this.legBR.lower.rotation.x) * 0.15;
-
-                this.legFL.position.y += (83 - this.legFL.position.y) * 0.15;
-                this.legFR.position.y += (83 - this.legFR.position.y) * 0.15;
-                this.legBL.position.y += (83 - this.legBL.position.y) * 0.15;
-                this.legBR.position.y += (83 - this.legBR.position.y) * 0.15;
-
-                if (this.body) {
-                    this.body.position.y += (84 - this.body.position.y) * 0.15;
-                    this.body.rotation.z += (0 - this.body.rotation.z) * 0.15;
-                    this.body.rotation.y += (0 - this.body.rotation.y) * 0.15;
-                }
-
-                // Slow happy wag when idle
-                const time = Date.now() * 0.003;
-                this.tail.rotation.y = Math.sin(time) * 0.2;
-                this.head.position.y += (90 - this.head.position.y) * 0.15;
-                this.head.position.x += (0 - this.head.position.x) * 0.15;
+                this.walkWeight = THREE.MathUtils.lerp(this.walkWeight, 0, 0.15 * timeScale);
             }
+
+            // Calculate targets for 4 legs (stride: 22, lift: 14, rest Y: -83)
+            const coordsFL = getFootCoords(this.walkCycle, this.walkWeight, 22, 14, -83);
+            const coordsBR = getFootCoords(this.walkCycle + 0.1, this.walkWeight, 22, 14, -83);
+            const coordsFR = getFootCoords(this.walkCycle + Math.PI, this.walkWeight, 22, 14, -83);
+            const coordsBL = getFootCoords(this.walkCycle + Math.PI - 0.1, this.walkWeight, 22, 14, -83);
+
+            const ikFL = solveLegIK(coordsFL.z, coordsFL.y, 44, 44);
+            const ikBR = solveLegIK(coordsBR.z, coordsBR.y, 44, 44);
+            const ikFR = solveLegIK(coordsFR.z, coordsFR.y, 44, 44);
+            const ikBL = solveLegIK(coordsBL.z, coordsBL.y, 44, 44);
+
+            // Apply rotations
+            this.legFL.upper.rotation.x = ikFL.thigh;
+            this.legFL.lower.rotation.x = ikFL.knee;
+            this.legBR.upper.rotation.x = ikBR.thigh;
+            this.legBR.lower.rotation.x = ikBR.knee;
+            this.legFR.upper.rotation.x = ikFR.thigh;
+            this.legFR.lower.rotation.x = ikFR.knee;
+            this.legBL.upper.rotation.x = ikBL.thigh;
+            this.legBL.lower.rotation.x = ikBL.knee;
+
+            // Ensure leg hips are fixed to Y=83
+            this.legFL.position.y = 83;
+            this.legBR.position.y = 83;
+            this.legFR.position.y = 83;
+            this.legBL.position.y = 83;
+
+            // Body weight shifts (bobbing, rolling, yawning)
+            if (this.body) {
+                const bob = Math.sin(this.walkCycle * 2) * 1.5 * this.walkWeight;
+                const roll = Math.sin(this.walkCycle) * 0.04 * this.walkWeight;
+                const yaw = Math.cos(this.walkCycle) * 0.03 * this.walkWeight;
+                
+                this.body.position.y = THREE.MathUtils.lerp(this.body.position.y, 84 + bob, 0.15 * timeScale);
+                this.body.rotation.z = THREE.MathUtils.lerp(this.body.rotation.z, roll, 0.15 * timeScale);
+                this.body.rotation.y = THREE.MathUtils.lerp(this.body.rotation.y, yaw, 0.15 * timeScale);
+            }
+
+            // Tail wag
+            const tailWag = isMoving 
+                ? Math.sin(this.walkCycle * 2.5) * 0.4 
+                : Math.sin(Date.now() * 0.003) * 0.2;
+            this.tail.rotation.y = THREE.MathUtils.lerp(this.tail.rotation.y, tailWag, 0.15 * timeScale);
+            
+            // Head bob and sway
+            const headBob = isMoving ? Math.abs(Math.sin(this.walkCycle)) * 4.5 : 0;
+            const headSwayX = isMoving ? Math.sin(this.walkCycle) * 0.8 : 0;
+            this.head.position.y = THREE.MathUtils.lerp(this.head.position.y, 90 + headBob, 0.15 * timeScale);
+            this.head.position.x = THREE.MathUtils.lerp(this.head.position.x, headSwayX, 0.15 * timeScale);
         }
         this.group.position.set(this.x, this.altitude, this.y);
+        this.prevX = this.x;
+        this.prevY = this.y;
     }
     destroy() {
         scene.remove(this.group);
@@ -1017,20 +1299,46 @@ class Enemy {
         mandibleR.castShadow = true;
         this.antBodyGroup.add(mandibleR);
 
-        // Antennae
-        let antennaL = new THREE.Mesh(boxGeo, matAntBody);
-        antennaL.scale.set(1.5, 1.5, 14);
-        antennaL.position.set(-6, 87, 28); // Lowered from 96 to 87
-        antennaL.rotation.set(0.4, -0.3, 0);
-        antennaL.castShadow = true;
-        this.antBodyGroup.add(antennaL);
-
-        let antennaR = new THREE.Mesh(boxGeo, matAntBody);
-        antennaR.scale.set(1.5, 1.5, 14);
-        antennaR.position.set(6, 87, 28); // Lowered from 96 to 87
-        antennaR.rotation.set(0.4, 0.3, 0);
-        antennaR.castShadow = true;
-        this.antBodyGroup.add(antennaR);
+        // Long Antennae with glowing sonar-emitting tips
+        const antLen = 35;
+        
+        // Left Antenna Group
+        const antennaLGroup = new THREE.Group();
+        antennaLGroup.position.set(-5, 85, 28);
+        antennaLGroup.rotation.set(0.35, -0.25, -0.1);
+        
+        const antennaLMesh = new THREE.Mesh(boxGeo, matAntBody);
+        antennaLMesh.scale.set(1.2, 1.2, antLen);
+        antennaLMesh.position.set(0, 0, antLen / 2); // pivot at base, extending forward along local Z
+        antennaLMesh.castShadow = true;
+        antennaLGroup.add(antennaLMesh);
+        
+        const tipL = new THREE.Mesh(boxGeo, this.glowMat);
+        tipL.scale.set(3.5, 3.5, 3.5);
+        tipL.position.set(0, 0, antLen); // at the end of the antenna
+        tipL.castShadow = true;
+        antennaLGroup.add(tipL);
+        this.antBodyGroup.add(antennaLGroup);
+        this.antennaL = antennaLGroup;
+        
+        // Right Antenna Group
+        const antennaRGroup = new THREE.Group();
+        antennaRGroup.position.set(5, 85, 28);
+        antennaRGroup.rotation.set(0.35, 0.25, 0.1);
+        
+        const antennaRMesh = new THREE.Mesh(boxGeo, matAntBody);
+        antennaRMesh.scale.set(1.2, 1.2, antLen);
+        antennaRMesh.position.set(0, 0, antLen / 2);
+        antennaRMesh.castShadow = true;
+        antennaRGroup.add(antennaRMesh);
+        
+        const tipR = new THREE.Mesh(boxGeo, this.glowMat);
+        tipR.scale.set(3.5, 3.5, 3.5);
+        tipR.position.set(0, 0, antLen);
+        tipR.castShadow = true;
+        antennaRGroup.add(tipR);
+        this.antBodyGroup.add(antennaRGroup);
+        this.antennaR = antennaRGroup;
 
         // Abdomen (gaster - bulbous back part)
         let abdomen = new THREE.Mesh(boxGeo, matAntBody);
@@ -1186,7 +1494,7 @@ class Enemy {
             const geo = new THREE.CylinderGeometry(radius, radius, scanHeight, 16, 8, true, -angleWidth/2, angleWidth);
             const mesh = new THREE.Mesh(geo, arcMat.clone());
             // Center vertically so bottom rests at y = 0
-            mesh.position.set(0, scanHeight/2, 24);
+            mesh.position.set(0, scanHeight/2, 55);
             this.scanConeGroup.add(mesh);
             this.scanArcs.push({
                 line: mesh, // keep named 'line' to match update code references
@@ -1277,9 +1585,17 @@ class Enemy {
                 position.needsUpdate = true;
             });
         }
+        // Animate antennae wiggling (simulating active sonar scan)
+        if (this.antennaL && this.antennaR) {
+            const antTime = Date.now() * 0.012 * timeScale;
+            this.antennaL.rotation.y = -0.25 + Math.sin(antTime) * 0.08;
+            this.antennaL.rotation.x = 0.35 + Math.cos(antTime) * 0.04;
+            this.antennaR.rotation.y = 0.25 + Math.sin(antTime + 1.5) * 0.08;
+            this.antennaR.rotation.x = 0.35 + Math.cos(antTime + 1.5) * 0.04;
+        }
 
         // Animate 8 legs walking with a rapid, scurrying staggered gait (2 legs moving at a time)
-        this.walkCycle += this.speed * 0.16 * timeScale; // 3.5x faster walking speed for scurrying
+        this.walkCycle += this.speed * 0.08 * timeScale; // Reduced by half
         
         for (let i = 0; i < 4; i++) {
             const legL = this.legsL[i];
@@ -1628,6 +1944,7 @@ let smoothCamDirX = 0;
 let smoothCamDirZ = 1;
 let cameraYaw = 0;
 let cameraPitch = 0.3; // radians looking slightly down
+let dogRailX = null;
 let enemies = [];
 let projectiles = [];
 let particles = [];
@@ -2301,47 +2618,70 @@ function update() {
         let lookTarget = new THREE.Vector3(checkX, 20, checkY);
 
         if (!effectCamZoom) {
-            // Over-the-shoulder orbiting camera (Started main camera)
-            // Make base camera 2x further (260 vs 130) and scale further as the dog grows
-            let baseDist = 260;
-            if (isMobile && window.innerHeight > window.innerWidth) {
-                baseDist = 360; // Zoom out for mobile portrait mode
-            }
-            let targetDist = baseDist * (bigDog ? bigDog.dogScale : 1.0);
-            if (camDistance < targetDist) {
-                camDistance = Math.min(targetDist, camDistance + 5.0);
+            if (player.controlDog && bigDog && bigDog.active) {
+                // Cinematic Rail Camera (locks tracking line while panning horizontally)
+                if (dogRailX === null) {
+                    dogRailX = bigDog.x;
+                }
+                // Rail X coordinate tracks the player very slowly (lagging/smooth)
+                dogRailX += (bigDog.x - dogRailX) * 0.015 * timeScale;
+                
+                // Base distance scales with dog size
+                const baseDist = 220 * bigDog.dogScale;
+                
+                // Position camera on the rail (to the side/behind, locked in X offset but tracks Z directly)
+                targetCamX = dogRailX - baseDist * 0.8;
+                targetCamZ = bigDog.y - baseDist * 0.5;
+                targetCamY = 110 * bigDog.dogScale;
+                
+                // Look target is centered exactly on the Robo Dog
+                lookTarget.set(bigDog.x, 35 * bigDog.dogScale, bigDog.y);
             } else {
-                camDistance = Math.max(targetDist, camDistance - 5.0);
+                // Reset dogRailX when not playing as the dog
+                dogRailX = null;
+                
+                // Over-the-shoulder orbiting camera (Started main camera)
+                // Make base camera 2x further (260 vs 130) and scale further as the dog grows
+                let baseDist = 260;
+                if (isMobile && window.innerHeight > window.innerWidth) {
+                    baseDist = 360; // Zoom out for mobile portrait mode
+                }
+                let targetDist = baseDist * (bigDog ? bigDog.dogScale : 1.0);
+                if (camDistance < targetDist) {
+                    camDistance = Math.min(targetDist, camDistance + 5.0);
+                } else {
+                    camDistance = Math.max(targetDist, camDistance - 5.0);
+                }
+                
+                const targetDirX = Math.sin(cameraYaw);
+                const targetDirZ = Math.cos(cameraYaw);
+                
+                // Lerp the direction vector for ultra-smooth orbiting (prevents angular snapping)
+                smoothCamDirX += (targetDirX - smoothCamDirX) * 0.08;
+                smoothCamDirZ += (targetDirZ - smoothCamDirZ) * 0.08;
+                
+                const len = Math.sqrt(smoothCamDirX * smoothCamDirX + smoothCamDirZ * smoothCamDirZ);
+                const forwardX = len > 0 ? smoothCamDirX / len : 0;
+                const forwardZ = len > 0 ? smoothCamDirZ / len : 1;
+                
+                const rightX = forwardZ;
+                const rightZ = -forwardX;
+                
+                const pitchCos = Math.cos(cameraPitch);
+                const pitchSin = Math.sin(cameraPitch);
+                
+                // Position behind and slightly to the right (over the shoulder)
+                targetCamX = checkX - forwardX * (camDistance * pitchCos) + rightX * 18;
+                targetCamZ = checkY - forwardZ * (camDistance * pitchCos) + rightZ * 18;
+                targetCamY = 50 + camDistance * pitchSin; // Adjust height based on pitch
+                
+                // Look ahead of the player at height
+                lookTarget.set(
+                    checkX + forwardX * 60,
+                    70,
+                    checkY + forwardZ * 60
+                );
             }
-            
-            const targetDirX = Math.sin(cameraYaw);
-            const targetDirZ = Math.cos(cameraYaw);
-            
-            // Lerp the direction vector for ultra-smooth orbiting (prevents angular snapping)
-            smoothCamDirX += (targetDirX - smoothCamDirX) * 0.08;
-            smoothCamDirZ += (targetDirZ - smoothCamDirZ) * 0.08;
-            
-            const len = Math.sqrt(smoothCamDirX * smoothCamDirX + smoothCamDirZ * smoothCamDirZ);
-            const forwardX = len > 0 ? smoothCamDirX / len : 0;
-            const forwardZ = len > 0 ? smoothCamDirZ / len : 1;
-            
-            const rightX = forwardZ;
-            const rightZ = -forwardX;
-            
-            const pitchCos = Math.cos(cameraPitch);
-            const pitchSin = Math.sin(cameraPitch);
-            
-            // Position behind and slightly to the right (over the shoulder)
-            targetCamX = checkX - forwardX * (camDistance * pitchCos) + rightX * 18;
-            targetCamZ = checkY - forwardZ * (camDistance * pitchCos) + rightZ * 18;
-            targetCamY = 50 + camDistance * pitchSin; // Adjust height based on pitch
-            
-            // Look ahead of the player at height
-            lookTarget.set(
-                checkX + forwardX * 60,
-                70,
-                checkY + forwardZ * 60
-            );
         } else {
             // Isometric / Overhead view (Zoom effect)
             // Make base camera 2x further (800 vs 400) and scale further as the dog grows
